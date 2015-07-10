@@ -115,7 +115,7 @@ ok(
   );
 
 #
-# SKIP
+# SKIP => HASH, EXTRA
 #
 
 ok(
@@ -129,3 +129,4 @@ ok(
       )->has_errors,
     'Option __ELEM_SKIP__'
   );
+

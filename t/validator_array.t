@@ -7,15 +7,15 @@ use QBit::Validator;
 # ARRAY #
 #########
 
-ok(QBit::Validator->new(data => undef, template => {ARRAY},)->has_errors, 'Use __ELEM_TYPE__ == ARRAY and data = undef');
+ok(QBit::Validator->new(data => undef, template => {ARRAY},)->has_errors, 'Use type ARRAY and data = undef');
 
 ok(!QBit::Validator->new(data => undef, template => {ARRAY, OPT},)->has_errors, 'Use OPT and data = undef');
 
-ok(QBit::Validator->new(data => 'scalar', template => {ARRAY},)->has_errors, 'Use __ELEM_TYPE__ == ARRAY and data = scalar');
+ok(QBit::Validator->new(data => 'scalar', template => {ARRAY},)->has_errors, 'Use type ARRAY and data = scalar');
 
-ok(QBit::Validator->new(data => {}, template => {ARRAY},)->has_errors, 'Use __ELEM_TYPE__ == ARRAY and data = hash');
+ok(QBit::Validator->new(data => {}, template => {ARRAY},)->has_errors, 'Use type ARRAY and data = hash');
 
-ok(!QBit::Validator->new(data => [], template => {ARRAY},)->has_errors, 'Use __ELEM_TYPE__ == ARRAY and data = array');
+ok(!QBit::Validator->new(data => [], template => {ARRAY},)->has_errors, 'Use type ARRAY and data = array');
 
 #
 # size_min
@@ -175,7 +175,7 @@ ok(
         data     => [1, {key => 2}, 'qbit'],
         template => {
             ARRAY,
-            contents => [{}, {HASH, key => {}}, {in => 'qbit'}],
+            contents => [{}, {HASH, fields => {key => {}}}, {in => 'qbit'}],
         },
       )->has_errors,
     'Option "contents" (no error)'
@@ -193,29 +193,29 @@ ok(
   );
 
 #
-# __ELEM_CHECK__
+# check
 #
 
 $error = FALSE;
 try {
-    QBit::Validator->new(data => [], template => {ARRAY, __ELEM_CHECK__ => undef,},);
+    QBit::Validator->new(data => [], template => {ARRAY, check => undef,},);
 }
 catch {
     $error = TRUE;
 };
-ok($error, 'Option __ELEM_CHECK__ must be code');
+ok($error, 'Option "check" must be code');
 
 ok(
     !QBit::Validator->new(
         data     => [1, 2, 3],
         template => {
             ARRAY,
-            __ELEM_CHECK__ => sub {
+            check => sub {
                 $_[1]->[2] != $_[1]->[0] + $_[1]->[1] ? gettext('[2] must be equal [0] + [1]') : '';
             },
         },
       )->has_errors,
-    'Option __ELEM_CHECK__ (no error)'
+    'Option "check" (no error)'
   );
 
 ok(
@@ -223,11 +223,11 @@ ok(
         data     => [1, 2, 4],
         template => {
             ARRAY,
-            __ELEM_CHECK__ => sub {
+            check => sub {
                 $_[1]->[2] != $_[1]->[0] + $_[1]->[1] ? gettext('[2] must be equal [0] + [1]') : '';
             },
         },
       )->has_errors,
-    'Option __ELEM_CHECK__ (error)'
+    'Option "check" (error)'
   );
 

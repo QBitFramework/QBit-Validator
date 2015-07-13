@@ -20,35 +20,16 @@ BEGIN {
       SCALAR
       HASH
       ARRAY
-      POSITIVE_NUMBER
       );
     @EXPORT_OK = @EXPORT;
 }
 
-my @reserved_keys = qw(
-  __ELEM_OPTIONAL__
-  __ELEM_EXTRA__
-  __ELEM_TYPE__
-  __ELEM_CHECK__
-  __ELEM_MSG__
-  __ELEM_DEPS__
-  );
-
-my %reserved_keys = map {$_ => TRUE} @reserved_keys;
-
-use constant SKIP   => (__ELEM_SKIP__     => TRUE);
-use constant OPT    => (__ELEM_OPTIONAL__ => TRUE);
-use constant EXTRA  => (__ELEM_EXTRA__    => TRUE);
-use constant SCALAR => (__ELEM_TYPE__     => 'SCALAR');
-use constant HASH   => (__ELEM_TYPE__     => 'HASH');
-use constant ARRAY  => (__ELEM_TYPE__     => 'ARRAY');
-
-use constant POSITIVE_NUMBER => (
-    __ELEM_TYPE__ => 'SCALAR',
-    regexp        => qr/\A[0-9]+\z/,
-    min           => 0,
-    __ELEM_MSG__  => gettext('Data must be positive number')
-);
+use constant SKIP   => (skip     => TRUE);
+use constant OPT    => (optional => TRUE);
+use constant EXTRA  => (extra    => TRUE);
+use constant SCALAR => (type     => 'scalar');
+use constant HASH   => (type     => 'hash');
+use constant ARRAY  => (type     => 'array');
 
 __PACKAGE__->mk_accessors(qw(data template));
 
@@ -68,35 +49,49 @@ sub init {
 sub _validation {
     my ($self, $data, $template, @path_fields) = @_;
 
-    if ($template->{'__ELEM_SKIP__'}) {
+    if ($template->{'skip'}) {
         $self->_add_ok(@path_fields);
 
         return FALSE;
     }
 
-    $template->{'__ELEM_TYPE__'} //= 'SCALAR';
+    $template->{'type'} //= 'scalar';
 
     $self->_add_error($template, gettext('Data must be defined'))
-      if !$template->{'__ELEM_OPTIONAL__'} && !defined($data);
+      if !$template->{'optional'} && !defined($data);
 
-    if (defined($data)) {
-        if ($template->{'__ELEM_TYPE__'} eq 'SCALAR') {
-            $self->_validation_scalar($data, $template, @path_fields);
-        } elsif ($template->{'__ELEM_TYPE__'} eq 'HASH') {
-            $self->_validation_hash($data, $template, @path_fields);
-        } elsif ($template->{'__ELEM_TYPE__'} eq 'ARRAY') {
-            $self->_validation_array($data, $template, @path_fields);
-        } else {
-            throw Exception::Validator gettext('Unknown __ELEM_TYPE__ "%s"', $template->{'__ELEM_TYPE__'});
-        }
+    $template->{'type'} = [$template->{'type'}] unless ref($template->{'type'}) eq 'ARRAY';
 
-        if (exists($template->{'__ELEM_CHECK__'})) {
-            throw Exception::Validator gettext('Option "__ELEM_CHECK__" must be code')
-              if !defined($template->{'__ELEM_CHECK__'}) || ref($template->{'__ELEM_CHECK__'}) ne 'CODE';
+    foreach my $type (@{$template->{'type'}}) {
+        if (defined($data)) {
+            if ($type eq 'scalar') {
+                $self->_validation_scalar($data, $template, @path_fields);
+            } elsif ($type eq 'hash') {
+                $self->_validation_hash($data, $template, @path_fields);
+            } elsif ($type eq 'array') {
+                $self->_validation_array($data, $template, @path_fields);
+            } else {
+                unless (exists($self->{'__REQUIRED_TYPE__'}{$type})) {
+                    my $type_class = 'QBit::Validator::Type::' . $type;
+                    my $type_fn    = "$type_class.pm";
+                    $type_fn =~ s/::/\//g;
 
-            my $error = $template->{'__ELEM_CHECK__'}($self, $data, $template, @path_fields);
+                    require $type_fn or throw $!;
 
-            $self->_add_error($template, $error, @path_fields) if $error;
+                    $self->{'__REQUIRED_TYPE__'}{$type} = $type_class->new();
+                }
+
+                $self->_validation($data, $self->{'__REQUIRED_TYPE__'}{$type}->get_template, @path_fields);
+            }
+
+            if (exists($template->{'check'})) {
+                throw Exception::Validator gettext('Option "check" must be code')
+                  if !defined($template->{'check'}) || ref($template->{'check'}) ne 'CODE';
+
+                my $error = $template->{'check'}($self, $data, $template, @path_fields);
+
+                $self->_add_error($template, $error, @path_fields) if $error;
+            }
         }
     }
 }
@@ -190,22 +185,19 @@ sub _validation_hash {
         return FALSE;
     }
 
-    my @fields = grep {!$reserved_keys{$_}} keys(%$template);
+    my @fields = keys(%{$template->{'fields'}});
 
-    my %template_fields = ();
     foreach my $field (@fields) {
-        $template_fields{$field} = TRUE;
-
         my @path = (@path_fields, $field);
 
-        if (exists($template->{$field}{'__ELEM_DEPS__'})) {
-            $self->_add_error($template, gettext('Option __ELEM_DEPS__ must be defined'), @path_fields)
-              unless defined($template->{$field}{'__ELEM_DEPS__'});
+        if (exists($template->{'fields'}{$field}{'deps'})) {
+            $self->_add_error($template, gettext('Option deps must be defined'), @path_fields)
+              unless defined($template->{'fields'}{$field}{'deps'});
 
-            $template->{$field}{'__ELEM_DEPS__'} = [$template->{$field}{'__ELEM_DEPS__'}]
-              if ref($template->{$field}{'__ELEM_DEPS__'}) ne 'ARRAY';
+            $template->{'fields'}{$field}{'deps'} = [$template->{'fields'}{$field}{'deps'}]
+              if ref($template->{'fields'}{$field}{'deps'}) ne 'ARRAY';
 
-            foreach my $dep_field (@{$template->{$field}{'__ELEM_DEPS__'}}) {
+            foreach my $dep_field (@{$template->{'fields'}{$field}{'deps'}}) {
                 unless (defined($data->{$dep_field})) {
                     $self->_add_error($template, gettext('Key "%s" depends from "%s"', $field, $dep_field), @path);
 
@@ -215,15 +207,15 @@ sub _validation_hash {
         }
 
         $self->_add_error($template, gettext('Key "%s" required', $field), @path)
-          if !$template->{$field}{'__ELEM_OPTIONAL__'} && !defined($data->{$field});
+          if !$template->{'fields'}{$field}{'optional'} && !defined($data->{$field});
 
-        $self->_validation($data->{$field}, $template->{$field}, @path);
+        $self->_validation($data->{$field}, $template->{'fields'}{$field}, @path);
     }
 
-    my @extra_fields = grep {!$template_fields{$_}} keys(%$data);
+    my @extra_fields = grep {!$template->{'fields'}{$_}} keys(%$data);
 
     $self->_add_error($template, gettext('Extra fields: %s', join(', ', @extra_fields)))
-      if @extra_fields && !$template->{'__ELEM_EXTRA__'};
+      if @extra_fields && !$template->{'extra'};
 
     $self->_add_ok(@path_fields);
 }
@@ -306,13 +298,15 @@ sub _add_error {
 
     if (exists($self->{'__CHECK_FIELDS__'}{$error_key}{'error'})) {
         push(@{$self->{'__CHECK_FIELDS__'}{$error_key}{'error'}{'msgs'}}, $error)
-          unless exists($template->{'__ELEM_MSG__'});
+          unless exists($template->{'msg'});
     } else {
         $self->{'__CHECK_FIELDS__'}{$error_key}{'error'} = {
-            msgs => [exists($template->{'__ELEM_MSG__'}) ? $template->{'__ELEM_MSG__'} : $error],
+            msgs => [exists($template->{'msg'}) ? $template->{'msg'} : $error],
             path => \@path_fields
         };
     }
+
+    delete($self->{'__CHECK_FIELDS__'}{$error_key}{'ok'}) if exists($self->{'__CHECK_FIELDS__'}{$error_key}{'ok'});
 }
 
 sub get_all_errors {

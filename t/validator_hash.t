@@ -9,65 +9,76 @@ use QBit::Validator;
 
 ok(!QBit::Validator->new(data => {}, template => {HASH},)->has_errors, 'Use constant HASH');
 
-ok(!QBit::Validator->new(data => undef, template => {HASH, OPT, key => {}},)->has_errors, 'HASH and OPT');
+ok(!QBit::Validator->new(data => undef, template => {HASH, OPT, fields => {key => {}}},)->has_errors, 'HASH and OPT');
 
 ok(QBit::Validator->new(data => [], template => {HASH},)->has_errors, 'Data must be type HASH');
 
-ok(QBit::Validator->new(data => {}, template => {HASH, key => {}},)->has_errors, 'Check required keys');
+ok(QBit::Validator->new(data => {}, template => {HASH, fields => {key => {}}},)->has_errors, 'Check required keys');
 
-ok(!QBit::Validator->new(data => {}, template => {HASH, key => {OPT}},)->has_errors, 'Check key with OPT');
+ok(!QBit::Validator->new(data => {}, template => {HASH, fields => {key => {OPT}}},)->has_errors, 'Check key with OPT');
 
-ok(!QBit::Validator->new(data => {key => 1}, template => {HASH, key => {}},)->has_errors, 'Check key with scalar data');
+ok(!QBit::Validator->new(data => {key => 1}, template => {HASH, fields => {key => {}}},)->has_errors,
+    'Check key with scalar data');
 
-ok(QBit::Validator->new(data => {key => 'abc'}, template => {HASH, key => {regexp => qr/^\d+$/}},)->has_errors,
-    'Check key with scalar data and check data');
+ok(
+    QBit::Validator->new(data => {key => 'abc'}, template => {HASH, fields => {key => {regexp => qr/^\d+$/}}},)
+      ->has_errors,
+    'Check key with scalar data and check data'
+  );
 
 ok(
     !QBit::Validator->new(
         data => {key => 'abc', key2 => 5},
-        template => {HASH, key => {regexp => qr/^[abc]{3}$/}, key2 => {eq => 5}},
+        template => {HASH, fields => {key => {regexp => qr/^[abc]{3}$/}, key2 => {eq => 5}}},
       )->has_errors,
     'Check two key with scalar data and check data'
   );
 
 ok(
-    QBit::Validator->new(data => {key => {key2 => 7}}, template => {HASH, key => {HASH, key2 => {max => 4}}},)
-      ->has_errors,
+    QBit::Validator->new(
+        data => {key => {key2 => 7}},
+        template => {HASH, fields => {key => {HASH, fields => {key2 => {max => 4}}}}},
+      )->has_errors,
     'Check key with hash data and check data'
   );
 
-ok(QBit::Validator->new(data => {key => 1, key2 => 2}, template => {HASH, key => {}},)->has_errors, 'Check extra keys');
+ok(QBit::Validator->new(data => {key => 1, key2 => 2}, template => {HASH, fields => {key => {}}},)->has_errors,
+    'Check extra keys');
 
-ok(!QBit::Validator->new(data => {key => 1, key2 => 2}, template => {HASH, EXTRA, key => {}},)->has_errors,
-    'Don\'t check extra keys with __ELEM_EXTRA__');
+ok(
+    !QBit::Validator->new(data => {key => 1, key2 => 2}, template => {HASH, EXTRA, fields => {key => {}}},)->has_errors,
+    'Don\'t check extra keys with EXTRA'
+  );
 
 #
-# __ELEM_CHECK__
+# check
 #
 
 my $error;
 try {
-    QBit::Validator->new(data => {key => 1}, template => {HASH, __ELEM_CHECK__ => undef, key => {}},);
+    QBit::Validator->new(data => {key => 1}, template => {HASH, check => undef, fields => {key => {}}},);
 }
 catch {
     $error = TRUE;
 };
-ok($error, 'Option __ELEM_CHECK__ must be code');
+ok($error, 'Option "check" must be code');
 
 ok(
     !QBit::Validator->new(
         data     => {key => 2, key2 => 3, key3 => 5},
         template => {
             HASH,
-            __ELEM_CHECK__ => sub {
+            check => sub {
                 $_[1]->{'key3'} != $_[1]->{'key'} + $_[1]->{'key2'} ? gettext('Key3 must be equal key + key2') : '';
             },
-            key  => {},
-            key2 => {},
-            key3 => {}
+            fields => {
+                key  => {},
+                key2 => {},
+                key3 => {}
+            }
         },
       )->has_errors,
-    'Option __ELEM_CHECK__ (no error)'
+    'Option "check" (no error)'
   );
 
 ok(
@@ -75,19 +86,21 @@ ok(
         data     => {key => 2, key2 => 3, key3 => 7},
         template => {
             HASH,
-            __ELEM_CHECK__ => sub {
+            check => sub {
                 $_[1]->{'key3'} != $_[1]->{'key'} + $_[1]->{'key2'} ? gettext('Key3 must be equal key + key2') : '';
             },
-            key  => {},
-            key2 => {},
-            key3 => {}
+            fields => {
+                key  => {},
+                key2 => {},
+                key3 => {}
+            }
         },
       )->has_errors,
-    'Option __ELEM_CHECK__ (error)'
+    'Option "check" (error)'
   );
 
 #
-# __ELEM_DEPS__
+# deps
 #
 
 ok(
@@ -95,11 +108,13 @@ ok(
         data     => {key => 1, key2 => 2,},
         template => {
             HASH,
-            key  => {},
-            key2 => {__ELEM_DEPS__ => ['key']},
+            fields => {
+                key  => {},
+                key2 => {deps => ['key']},
+            }
         },
       )->has_errors,
-    'Option __ELEM_DEPS__ (no error)'
+    'Option "deps" (no error)'
   );
 
 ok(
@@ -107,15 +122,17 @@ ok(
         data     => {key2 => 2,},
         template => {
             HASH,
-            key  => {OPT},
-            key2 => {__ELEM_DEPS__ => ['key']},
+            fields => {
+                key  => {OPT},
+                key2 => {deps => ['key']},
+            }
         },
       )->has_errors,
-    'Option __ELEM_DEPS__ (error)'
+    'Option "deps" (error)'
   );
 
 #
-# SKIP => HASH, EXTRA
+# SKIP
 #
 
 ok(
@@ -123,10 +140,11 @@ ok(
         data     => {key => 1, key2 => {key3 => 3, key4 => 4}},
         template => {
             HASH,
-            key  => {},
-            key2 => {SKIP},
+            fields => {
+                key  => {},
+                key2 => {SKIP},
+            }
         },
       )->has_errors,
-    'Option __ELEM_SKIP__'
+    'Use SKIP'
   );
-

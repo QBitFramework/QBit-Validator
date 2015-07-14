@@ -76,7 +76,12 @@ sub _validation {
                     my $type_fn    = "$type_class.pm";
                     $type_fn =~ s/::/\//g;
 
-                    require $type_fn or throw Exception::Validator gettext('Unknown type "%s"', $type);
+                    try {
+                        require $type_fn;
+                    }
+                    catch {
+                        throw Exception::Validator gettext('Unknown type "%s"', $type);
+                    };
 
                     $self->{'__REQUIRED_TYPE__'}{$type} = $type_class->new();
                 }

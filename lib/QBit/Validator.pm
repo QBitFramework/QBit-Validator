@@ -31,7 +31,7 @@ use constant SCALAR => (type     => 'scalar');
 use constant HASH   => (type     => 'hash');
 use constant ARRAY  => (type     => 'array');
 
-__PACKAGE__->mk_accessors(qw(data template));
+__PACKAGE__->mk_accessors(qw(data template app));
 
 sub init {
     my ($self) = @_;
@@ -97,6 +97,8 @@ sub _validation {
 
                 $self->_add_error($template, $error, @path_fields) if $error;
             }
+        } else {
+            $self->_add_ok(@path_fields);
         }
     }
 }

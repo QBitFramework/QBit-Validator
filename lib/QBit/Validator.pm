@@ -197,7 +197,7 @@ sub _validation_hash {
     foreach my $field (@fields) {
         my @path = (@path_fields, $field);
 
-        if (exists($template->{'fields'}{$field}{'deps'})) {
+        if (exists($template->{'fields'}{$field}{'deps'}) && defined($data->{$field})) {
             $self->_add_error($template, gettext('Option deps must be defined'), @path_fields)
               unless defined($template->{'fields'}{$field}{'deps'});
 

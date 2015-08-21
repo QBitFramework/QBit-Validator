@@ -31,10 +31,20 @@ use constant SCALAR => (type     => 'scalar');
 use constant HASH   => (type     => 'hash');
 use constant ARRAY  => (type     => 'array');
 
-__PACKAGE__->mk_accessors(qw(data template app));
+__PACKAGE__->mk_ro_accessors(qw(data template app));
+
+my @available_fields = qw(data template app throw);
 
 sub init {
     my ($self) = @_;
+
+    foreach (qw(data template)) {
+        throw Exception::Validator gettext('Expected "%s"', $_) unless exists($self->{$_});
+    }
+
+    my @bad_fields = grep {!in_array($_, \@available_fields)} keys(%{$self});
+    throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_fields))
+      if @bad_fields;
 
     $self->{'__CHECK_FIELDS__'} = {};
 
@@ -43,22 +53,27 @@ sub init {
 
     $self->_validation($data, $template);
 
-    $self->throw_exception() if $self->has_errors && $self->{'throw_exception'};
+    $self->throw_exception() if $self->has_errors && $self->{'throw'};
 }
 
 sub _validation {
     my ($self, $data, $template, @path_fields) = @_;
 
+    throw Exception gettext('Key "template" must be HASH') if !defined($template) || ref($template) ne 'HASH';
+
     if ($template->{'skip'}) {
         $self->_add_ok(@path_fields);
+
+        return TRUE;
+    }
+
+    if (!$template->{'optional'} && !defined($data)) {
+        $self->_add_error($template, gettext('Data must be defined'));
 
         return FALSE;
     }
 
     $template->{'type'} //= 'scalar';
-
-    $self->_add_error($template, gettext('Data must be defined'))
-      if !$template->{'optional'} && !defined($data);
 
     $template->{'type'} = [$template->{'type'}] unless ref($template->{'type'}) eq 'ARRAY';
 
@@ -118,57 +133,108 @@ sub _validation_scalar {
         return FALSE;
     }
 
+    my @bad_keys =
+      grep {!in_array($_, [qw(type skip optional deps check msg regexp min eq max len_min len len_max in)])}
+      keys(%$template);
+    throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_keys)) if @bad_keys;
+
     if (exists($template->{'regexp'})) {
         throw Exception::Validator gettext('Key "regexp" must be type "Regexp"')
           if !defined($template->{'regexp'}) || ref($template->{'regexp'}) ne 'Regexp';
 
-        $self->_add_error($template, gettext('Data do not fit the regular expression'), @path_fields)
-          if $data !~ $template->{'regexp'};
+        if ($data !~ $template->{'regexp'}) {
+            $self->_add_error($template, gettext('Got value "%s" do not fit the regular expression', $data),
+                @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'min'})) {
-        throw Exception::Validator gettext('Key "min" must be defined') unless defined($template->{'min'});
+        throw Exception::Validator gettext('Key "min" must be numeric') unless looks_like_number($template->{'min'});
 
-        $self->_add_error($template, gettext('Data less then "%s"', $template->{'min'}), @path_fields)
-          if $data < $template->{'min'};
+        unless (looks_like_number($data)) {
+            $self->_add_error($template, gettext('The data must be numeric, but got "%s"', $data), @path_fields);
+
+            return FALSE;
+        }
+
+        if ($data < $template->{'min'}) {
+            $self->_add_error($template, gettext('Got value "%s" less then "%s"', $data, $template->{'min'}),
+                @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'eq'})) {
-        throw Exception::Validator gettext('Key "eq" must be defined') unless defined($template->{'eq'});
+        throw Exception::Validator gettext('Key "eq" must be numeric') unless looks_like_number($template->{'eq'});
 
-        $self->_add_error($template, gettext('Data not equal "%s"', $template->{'eq'}), @path_fields)
-          unless $data == $template->{'eq'};
+        unless (looks_like_number($data)) {
+            $self->_add_error($template, gettext('The data must be numeric, but got "%s"', $data), @path_fields);
+
+            return FALSE;
+        }
+
+        unless ($data == $template->{'eq'}) {
+            $self->_add_error($template, gettext('Got value "%s" not equal "%s"', $data, $template->{'eq'}),
+                @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'max'})) {
-        throw Exception::Validator gettext('Key "max" must be defined') unless defined($template->{'max'});
+        throw Exception::Validator gettext('Key "max" must be numeric') unless looks_like_number($template->{'max'});
 
-        $self->_add_error($template, gettext('Data more than "%s"', $template->{'max'}), @path_fields)
-          if $data > $template->{'max'};
+        unless (looks_like_number($data)) {
+            $self->_add_error($template, gettext('The data must be numeric, but got "%s"', $data), @path_fields);
+
+            return FALSE;
+        }
+
+        if ($data > $template->{'max'}) {
+            $self->_add_error($template, gettext('Got value "%s" more than "%s"', $data, $template->{'max'}),
+                @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'len_min'})) {
         throw Exception::Validator gettext('Key "len_min" must be positive number')
           if !defined($template->{'len_min'}) || $template->{'len_min'} !~ /\A[0-9]+\z/;
 
-        $self->_add_error($template, gettext('Length data less then "%s"', $template->{'len_min'}), @path_fields)
-          if length($data) < $template->{'len_min'};
+        if (length($data) < $template->{'len_min'}) {
+            $self->_add_error($template, gettext('Length "%s" less then "%s"', $data, $template->{'len_min'}),
+                @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'len'})) {
         throw Exception::Validator gettext('Key "len" must be positive number')
           if !defined($template->{'len'}) || $template->{'len'} !~ /\A[0-9]+\z/;
 
-        $self->_add_error($template, gettext('Length data not equal "%s"', $template->{'len'}), @path_fields)
-          unless length($data) == $template->{'len'};
+        unless (length($data) == $template->{'len'}) {
+            $self->_add_error($template, gettext('Length "%s" not equal "%s"', $data, $template->{'len'}),
+                @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'len_max'})) {
         throw Exception::Validator gettext('Key "len_max" must be positive number')
           if !defined($template->{'len_max'}) || $template->{'len_max'} !~ /\A[0-9]+\z/;
 
-        $self->_add_error($template, gettext('Length data more than "%s"', $template->{'len_max'}), @path_fields)
-          if length($data) > $template->{'len_max'};
+        if (length($data) > $template->{'len_max'}) {
+            $self->_add_error($template, gettext('Length "%s" more than "%s"', $data, $template->{'len_max'}),
+                @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'in'})) {
@@ -176,8 +242,12 @@ sub _validation_scalar {
 
         $template->{'in'} = [$template->{'in'}] if ref($template->{'in'}) ne 'ARRAY';
 
-        $self->_add_error($template, gettext('Data not in array: %s', join(', ', @{$template->{'in'}})), @path_fields)
-          unless in_array($data, $template->{'in'});
+        unless (in_array($data, $template->{'in'})) {
+            $self->_add_error($template,
+                gettext('Got value "%s" not in array: %s', $data, join(', ', @{$template->{'in'}})), @path_fields);
+
+            return FALSE;
+        }
     }
 
     $self->_add_ok(@path_fields);
@@ -192,13 +262,18 @@ sub _validation_hash {
         return FALSE;
     }
 
+    my @bad_keys =
+      grep {!in_array($_, [qw(type skip optional extra deps check msg fields)])}
+      keys(%$template);
+    throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_keys)) if @bad_keys;
+
     my @fields = keys(%{$template->{'fields'}});
 
     foreach my $field (@fields) {
         my @path = (@path_fields, $field);
 
         if (exists($template->{'fields'}{$field}{'deps'}) && defined($data->{$field})) {
-            $self->_add_error($template, gettext('Option deps must be defined'), @path_fields)
+            throw Exception::Validator gettext('Option deps must be defined')
               unless defined($template->{'fields'}{$field}{'deps'});
 
             $template->{'fields'}{$field}{'deps'} = [$template->{'fields'}{$field}{'deps'}]
@@ -236,28 +311,45 @@ sub _validation_array {
         return FALSE;
     }
 
+    my @bad_keys =
+      grep {!in_array($_, [qw(type skip optional deps check msg size_min size size_max all contents)])}
+      keys(%$template);
+    throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_keys)) if @bad_keys;
+
     if (exists($template->{'size_min'})) {
         throw Exception gettext('Key "size_min" must be positive number')
           if !defined($template->{'size_min'}) || $template->{'size_min'} !~ /\A[0-9]+\z/;
 
-        $self->_add_error($template, gettext('Size data less then "%s"', $template->{'size_min'}), @path_fields)
-          if @$data < $template->{'size_min'};
+        if (@$data < $template->{'size_min'}) {
+            $self->_add_error($template,
+                gettext('Data size "%s" less then "%s"', scalar(@$data), $template->{'size_min'}), @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'size'})) {
         throw Exception gettext('Key "size" must be positive number')
           if !defined($template->{'size'}) || $template->{'size'} !~ /\A[0-9]+\z/;
 
-        $self->_add_error($template, gettext('Size data not equal "%s"', $template->{'size'}), @path_fields)
-          unless @$data == $template->{'size'};
+        unless (@$data == $template->{'size'}) {
+            $self->_add_error($template, gettext('Data size "%s" not equal "%s"', scalar(@$data), $template->{'size'}),
+                @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'size_max'})) {
         throw Exception gettext('Key "size_max" must be positive number')
           if !defined($template->{'size_max'}) || $template->{'size_max'} !~ /\A[0-9]+\z/;
 
-        $self->_add_error($template, gettext('Size data more than "%s"', $template->{'size_max'}), @path_fields)
-          if @$data > $template->{'size_max'};
+        if (@$data > $template->{'size_max'}) {
+            $self->_add_error($template,
+                gettext('Data size "%s" more than "%s"', scalar(@$data), $template->{'size_max'}), @path_fields);
+
+            return FALSE;
+        }
     }
 
     if (exists($template->{'all'}) && exists($template->{'contents'})) {
@@ -279,7 +371,8 @@ sub _validation_array {
           if !defined($template->{'contents'}) || ref($template->{'contents'}) ne 'ARRAY';
 
         if (@$data != @{$template->{'contents'}}) {
-            $self->_add_error($template, gettext('Size data no equal "%s"', scalar(@{$template->{'contents'}})),
+            $self->_add_error($template,
+                gettext('Data size "%s" no equal "%s"', scalar(@$data), scalar(@{$template->{'contents'}})),
                 @path_fields);
 
             return FALSE;
@@ -360,6 +453,17 @@ sub has_errors {
     my ($self) = @_;
 
     return !!$self->get_fields_with_error();
+}
+
+sub get_wrong_fields {
+    my ($self) = @_;
+
+    my @fields = ();
+    foreach ($self->get_fields_with_error()) {
+        push(@fields, pop(@{$_->{'path'}}) || '');
+    }
+
+    return @fields;
 }
 
 TRUE;

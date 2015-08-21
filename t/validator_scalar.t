@@ -1,11 +1,27 @@
-use Test::More tests => 34;
+use Test::More tests => 36;
 
 use qbit;
 use QBit::Validator;
 
-ok(QBit::Validator->new()->has_errors, 'Default - all data required');
+my $error = FALSE;
+try {
+    QBit::Validator->new();
+}
+catch {
+    $error = TRUE;
+};
+ok($error, 'Expected "data" and "template"');
 
-ok(!QBit::Validator->new(template => {OPT})->has_errors, 'Use OPT');
+ok(!QBit::Validator->new(data => undef, template => {OPT})->has_errors, 'Use OPT');
+
+$error = FALSE;
+try {
+    QBit::Validator->new(data => 5, template => undef);
+}
+catch {
+    $error = TRUE;
+};
+ok($error, 'Key "template" must be HASH');
 
 ##########
 # SCALAR #
@@ -16,7 +32,7 @@ ok(QBit::Validator->new(data => [], template => {},)->has_errors, 'Default type:
 #
 # regexp
 #
-my $error = FALSE;
+$error = FALSE;
 try {
     QBit::Validator->new(data => 23, template => {regexp => 'regexp'},);
 }
@@ -199,7 +215,7 @@ ok(
 
 is(
     QBit::Validator->new(data => 5, template => {in => 7, max => 2,},)->get_all_errors,
-    join("\n", gettext('Data more than "%s"', 2), gettext('Data not in array: %s', 7)),
+    gettext('Got value "%s" more than "%s"', 5, 2),
     'Get all errors'
   );
 
@@ -207,14 +223,23 @@ is(QBit::Validator->new(data => 5, template => {in => 7, max => 2, msg => 'my er
     'my error msg', 'Get my error');
 
 #
-# throw_exception => TRUE
+# throw => TRUE
 #
 
 $error = FALSE;
 try {
-    QBit::Validator->new(data => 5, template => {in => 7, max => 2,}, throw_exception => TRUE);
+    QBit::Validator->new(data => 5, template => {in => 7, max => 2,}, throw => TRUE);
 }
 catch Exception::Validator with {
     $error = TRUE;
 };
 ok($error, 'throw Exception');
+
+$error = FALSE;
+try {
+    QBit::Validator->new(data => 5, template => {in => 5}, unknown_option => TRUE);
+}
+catch Exception::Validator with {
+    $error = TRUE;
+};
+ok($error, 'throw Exception (get unknown option)');

@@ -82,7 +82,7 @@ sub _validation {
     unless ($no_check_options) {
         my $all_options = $self->_get_all_options_by_type($template->{'type'});
 
-        my $diff = arrays_difference([keys($template)], $all_options);
+        my $diff = arrays_difference([keys(%$template)], $all_options);
 
         throw Exception::Validator gettext('Unknown options: %s', join(', ', @$diff)) if @$diff;
     }

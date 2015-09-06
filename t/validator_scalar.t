@@ -1,4 +1,4 @@
-use Test::More tests => 36;
+use Test::More tests => 37;
 
 use qbit;
 use QBit::Validator;
@@ -11,8 +11,6 @@ catch {
     $error = TRUE;
 };
 ok($error, 'Expected "data" and "template"');
-
-ok(!QBit::Validator->new(data => undef, template => {OPT})->has_errors, 'Use OPT');
 
 $error = FALSE;
 try {
@@ -28,6 +26,15 @@ ok($error, 'Key "template" must be HASH');
 ##########
 
 ok(QBit::Validator->new(data => [], template => {},)->has_errors, 'Default type: SCALAR');
+
+$error = FALSE;
+try {
+    QBit::Validator->new(data => 5, template => {no_exist_option => TRUE});
+}
+catch {
+    $error = TRUE;
+};
+ok($error, 'Key "no_exist_option"');
 
 #
 # regexp
@@ -190,7 +197,7 @@ ok(
         data     => 'qbit',
         template => {
             check => sub {
-                $_[1] ne 'qbit' ? gettext('Data must be equal "qbit"') : '';
+                throw FF gettext('Data must be equal "qbit"') if $_[1] ne 'qbit';
               }
         },
       )->has_errors,
@@ -202,7 +209,7 @@ ok(
         data     => 5,
         template => {
             check => sub {
-                $_[1] == 5 ? gettext('Data must be no equal 5') : '';
+                throw FF gettext('Data must be no equal 5') if $_[1] == 5;
               }
         },
       )->has_errors,
@@ -214,7 +221,7 @@ ok(
 #
 
 is(
-    QBit::Validator->new(data => 5, template => {in => 7, max => 2,},)->get_all_errors,
+    QBit::Validator->new(data => 5, template => {max => 2,},)->get_all_errors,
     gettext('Got value "%s" more than "%s"', 5, 2),
     'Get all errors'
   );
@@ -243,3 +250,20 @@ catch Exception::Validator with {
     $error = TRUE;
 };
 ok($error, 'throw Exception (get unknown option)');
+
+#
+# correct error
+#
+
+is(
+    QBit::Validator->new(
+        data     => 'error',
+        template => {
+            check => sub {
+                throw FF gettext('Data must be equal 5') if $_[1] != 5;
+              }
+        },
+      )->get_error,
+    gettext('Incorrect data'),
+    'Check right error'
+  );

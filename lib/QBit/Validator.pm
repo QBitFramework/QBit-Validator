@@ -2,34 +2,15 @@ package Exception::Validator;
 
 use base qw(Exception);
 
+package FF;
+
+use base qw(Exception::Validator);
+
 package QBit::Validator;
 
 use qbit;
 
 use base qw(QBit::Class);
-
-use base qw(Exporter);
-
-BEGIN {
-    our (@EXPORT, @EXPORT_OK);
-
-    @EXPORT = qw(
-      SKIP
-      OPT
-      EXTRA
-      SCALAR
-      HASH
-      ARRAY
-      );
-    @EXPORT_OK = @EXPORT;
-}
-
-use constant SKIP   => (skip     => TRUE);
-use constant OPT    => (optional => TRUE);
-use constant EXTRA  => (extra    => TRUE);
-use constant SCALAR => (type     => 'scalar');
-use constant HASH   => (type     => 'hash');
-use constant ARRAY  => (type     => 'array');
 
 __PACKAGE__->mk_ro_accessors(qw(data template app));
 
@@ -57,200 +38,81 @@ sub init {
 }
 
 sub _validation {
-    my ($self, $data, $template, @path_fields) = @_;
+    my ($self, $data, $template, $no_check_options, @path_field) = @_;
 
-    throw Exception gettext('Key "template" must be HASH') if !defined($template) || ref($template) ne 'HASH';
-
-    if ($template->{'skip'}) {
-        $self->_add_ok(@path_fields);
-
-        return TRUE;
-    }
-
-    if (!$template->{'optional'} && !defined($data)) {
-        $self->_add_error($template, gettext('Data must be defined'));
-
-        return FALSE;
-    }
+    throw Exception::Validator gettext('Key "template" must be HASH')
+      if !defined($template) || ref($template) ne 'HASH';
 
     $template->{'type'} //= 'scalar';
 
     $template->{'type'} = [$template->{'type'}] unless ref($template->{'type'}) eq 'ARRAY';
 
     foreach my $type (@{$template->{'type'}}) {
-        if (defined($data)) {
-            if ($type eq 'scalar') {
-                $self->_validation_scalar($data, $template, @path_fields);
-            } elsif ($type eq 'hash') {
-                $self->_validation_hash($data, $template, @path_fields);
-            } elsif ($type eq 'array') {
-                $self->_validation_array($data, $template, @path_fields);
-            } else {
-                unless (exists($self->{'__REQUIRED_TYPE__'}{$type})) {
-                    my $type_class = 'QBit::Validator::Type::' . $type;
-                    my $type_fn    = "$type_class.pm";
-                    $type_fn =~ s/::/\//g;
+        next if $self->has_error(\@path_field);
 
-                    try {
-                        require $type_fn;
-                    }
-                    catch {
-                        throw Exception::Validator gettext('Unknown type "%s"', $type);
-                    };
+        unless (exists($self->{'__TYPES__'}{$type})) {
+            my $type_class = 'QBit::Validator::Type::' . $type;
+            my $type_fn    = "$type_class.pm";
+            $type_fn =~ s/::/\//g;
 
-                    $self->{'__REQUIRED_TYPE__'}{$type} = $type_class->new();
-                }
-
-                $self->_validation($data, $self->{'__REQUIRED_TYPE__'}{$type}->get_template, @path_fields);
+            try {
+                require $type_fn;
             }
+            catch {
+                ldump(shift->message);
+                throw Exception::Validator gettext('Unknown type "%s"', $type);
+            };
 
-            if (exists($template->{'check'})) {
-                throw Exception::Validator gettext('Option "check" must be code')
-                  if !defined($template->{'check'}) || ref($template->{'check'}) ne 'CODE';
-
-                my $error = $template->{'check'}($self, $data, $template, @path_fields);
-
-                $self->_add_error($template, $error, @path_fields) if $error;
-            }
-        } else {
-            $self->_add_ok(@path_fields);
+            $self->{'__TYPES__'}{$type} = $type_class->new();
         }
+
+        if (!$self->has_error(\@path_field) && $self->{'__TYPES__'}{$type}->can('get_template')) {
+            my $new_template = {
+                %{$self->{'__TYPES__'}{$type}->get_template},
+                map {$_ => $template->{$_}} grep {$_ ne 'type'} keys(%$template)
+            };
+
+            $self->_validation($data, $new_template, TRUE, @path_field);
+        }
+
+        $self->{'__TYPES__'}{$type}->check_options($self, $data, $template, @path_field)
+          unless $self->has_error(\@path_field);
     }
+    
+    unless ($no_check_options) {
+        my $all_options = $self->_get_all_options_by_type($template->{'type'});
+
+        my $diff = arrays_difference([keys($template)], $all_options);
+
+        throw Exception::Validator gettext('Unknown options: %s', join(', ', @$diff)) if @$diff;
+    }
+}
+
+sub _get_all_options_by_type {
+    my ($self, $types) = @_;
+    
+    $types //= 'scalar';
+    $types = [$types] unless ref($types) eq 'ARRAY';
+
+    my %uniq_options = ();
+
+    foreach my $type (@$types) {
+        if ($self->{'__TYPES__'}{$type}->can('get_template')) {
+            my $template = $self->{'__TYPES__'}{$type}->get_template();
+
+            $uniq_options{$_} = TRUE foreach @{$self->_get_all_options_by_type($template->{'type'})};
+        }
+
+        $uniq_options{$_} = TRUE foreach $self->{'__TYPES__'}{$type}->get_options();
+    }
+
+    return [keys(%uniq_options)];
 }
 
 sub throw_exception {
     my ($self) = @_;
 
     throw Exception::Validator $self->get_all_errors;
-}
-
-sub _validation_scalar {
-    my ($self, $data, $template, @path_fields) = @_;
-
-    if (ref($data)) {
-        $self->_add_error($template, gettext('Data must be SCALAR'), @path_fields);
-
-        return FALSE;
-    }
-
-    my @bad_keys =
-      grep {!in_array($_, [qw(type skip optional deps check msg regexp min eq max len_min len len_max in)])}
-      keys(%$template);
-    throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_keys)) if @bad_keys;
-
-    if (exists($template->{'regexp'})) {
-        throw Exception::Validator gettext('Key "regexp" must be type "Regexp"')
-          if !defined($template->{'regexp'}) || ref($template->{'regexp'}) ne 'Regexp';
-
-        if ($data !~ $template->{'regexp'}) {
-            $self->_add_error($template, gettext('Got value "%s" do not fit the regular expression', $data),
-                @path_fields);
-
-            return FALSE;
-        }
-    }
-
-    if (exists($template->{'min'})) {
-        throw Exception::Validator gettext('Key "min" must be numeric') unless looks_like_number($template->{'min'});
-
-        unless (looks_like_number($data)) {
-            $self->_add_error($template, gettext('The data must be numeric, but got "%s"', $data), @path_fields);
-
-            return FALSE;
-        }
-
-        if ($data < $template->{'min'}) {
-            $self->_add_error($template, gettext('Got value "%s" less then "%s"', $data, $template->{'min'}),
-                @path_fields);
-
-            return FALSE;
-        }
-    }
-
-    if (exists($template->{'eq'})) {
-        throw Exception::Validator gettext('Key "eq" must be numeric') unless looks_like_number($template->{'eq'});
-
-        unless (looks_like_number($data)) {
-            $self->_add_error($template, gettext('The data must be numeric, but got "%s"', $data), @path_fields);
-
-            return FALSE;
-        }
-
-        unless ($data == $template->{'eq'}) {
-            $self->_add_error($template, gettext('Got value "%s" not equal "%s"', $data, $template->{'eq'}),
-                @path_fields);
-
-            return FALSE;
-        }
-    }
-
-    if (exists($template->{'max'})) {
-        throw Exception::Validator gettext('Key "max" must be numeric') unless looks_like_number($template->{'max'});
-
-        unless (looks_like_number($data)) {
-            $self->_add_error($template, gettext('The data must be numeric, but got "%s"', $data), @path_fields);
-
-            return FALSE;
-        }
-
-        if ($data > $template->{'max'}) {
-            $self->_add_error($template, gettext('Got value "%s" more than "%s"', $data, $template->{'max'}),
-                @path_fields);
-
-            return FALSE;
-        }
-    }
-
-    if (exists($template->{'len_min'})) {
-        throw Exception::Validator gettext('Key "len_min" must be positive number')
-          if !defined($template->{'len_min'}) || $template->{'len_min'} !~ /\A[0-9]+\z/;
-
-        if (length($data) < $template->{'len_min'}) {
-            $self->_add_error($template, gettext('Length "%s" less then "%s"', $data, $template->{'len_min'}),
-                @path_fields);
-
-            return FALSE;
-        }
-    }
-
-    if (exists($template->{'len'})) {
-        throw Exception::Validator gettext('Key "len" must be positive number')
-          if !defined($template->{'len'}) || $template->{'len'} !~ /\A[0-9]+\z/;
-
-        unless (length($data) == $template->{'len'}) {
-            $self->_add_error($template, gettext('Length "%s" not equal "%s"', $data, $template->{'len'}),
-                @path_fields);
-
-            return FALSE;
-        }
-    }
-
-    if (exists($template->{'len_max'})) {
-        throw Exception::Validator gettext('Key "len_max" must be positive number')
-          if !defined($template->{'len_max'}) || $template->{'len_max'} !~ /\A[0-9]+\z/;
-
-        if (length($data) > $template->{'len_max'}) {
-            $self->_add_error($template, gettext('Length "%s" more than "%s"', $data, $template->{'len_max'}),
-                @path_fields);
-
-            return FALSE;
-        }
-    }
-
-    if (exists($template->{'in'})) {
-        throw Exception::Validator gettext('Key "in" must be defined') unless defined($template->{'in'});
-
-        $template->{'in'} = [$template->{'in'}] if ref($template->{'in'}) ne 'ARRAY';
-
-        unless (in_array($data, $template->{'in'})) {
-            $self->_add_error($template,
-                gettext('Got value "%s" not in array: %s', $data, join(', ', @{$template->{'in'}})), @path_fields);
-
-            return FALSE;
-        }
-    }
-
-    $self->_add_ok(@path_fields);
 }
 
 sub _validation_hash {
@@ -392,21 +254,21 @@ sub _validation_array {
 }
 
 sub _add_error {
-    my ($self, $template, $error, @path_fields) = @_;
+    my ($self, $template, $error, $field) = @_;
 
-    my $error_key = join(' => ', @path_fields);
+    my $key = $self->_get_key($field);
 
-    if (exists($self->{'__CHECK_FIELDS__'}{$error_key}{'error'})) {
-        push(@{$self->{'__CHECK_FIELDS__'}{$error_key}{'error'}{'msgs'}}, $error)
+    if ($self->has_error($field)) {
+        push(@{$self->{'__CHECK_FIELDS__'}{$key}{'error'}{'msgs'}}, $error)
           unless exists($template->{'msg'});
     } else {
-        $self->{'__CHECK_FIELDS__'}{$error_key}{'error'} = {
+        $self->{'__CHECK_FIELDS__'}{$key}{'error'} = {
             msgs => [exists($template->{'msg'}) ? $template->{'msg'} : $error],
-            path => \@path_fields
+            path => $field // []
         };
     }
 
-    delete($self->{'__CHECK_FIELDS__'}{$error_key}{'ok'}) if exists($self->{'__CHECK_FIELDS__'}{$error_key}{'ok'});
+    delete($self->{'__CHECK_FIELDS__'}{$key}{'ok'}) if exists($self->{'__CHECK_FIELDS__'}{$key}{'ok'});
 }
 
 sub get_all_errors {
@@ -422,11 +284,11 @@ sub get_all_errors {
 sub get_error {
     my ($self, $field) = @_;
 
-    $field //= '';
+    my $key = $self->_get_key($field);
 
     my $error = '';
     foreach ($self->get_fields_with_error()) {
-        $error = join("\n", @{$_->{'msgs'}}) if $field eq (pop(@{$_->{'path'}}) || '');
+        $error = join("\n", @{$_->{'msgs'}}) if $key eq $self->_get_key($_->{'path'});
     }
 
     return $error;
@@ -440,13 +302,23 @@ sub get_fields_with_error {
 }
 
 sub _add_ok {
-    my ($self, @path_fields) = @_;
+    my ($self, $field) = @_;
 
-    my $ok_key = join(' => ', @path_fields);
+    return if $self->checked($field) && $self->has_error($field);
 
-    return if exists($self->{'__CHECK_FIELDS__'}{$ok_key}) && $self->{'__CHECK_FIELDS__'}{$ok_key}{'error'};
+    $self->{'__CHECK_FIELDS__'}{$self->_get_key($field)}{'ok'} = TRUE;
+}
 
-    $self->{'__CHECK_FIELDS__'}{$ok_key}{'ok'} = TRUE;
+sub checked {
+    my ($self, $field) = @_;
+
+    return exists($self->{'__CHECK_FIELDS__'}{$self->_get_key($field)});
+}
+
+sub has_error {
+    my ($self, $field) = @_;
+
+    return exists($self->{'__CHECK_FIELDS__'}{$self->_get_key($field)}{'error'});
 }
 
 sub has_errors {
@@ -455,15 +327,14 @@ sub has_errors {
     return !!$self->get_fields_with_error();
 }
 
-sub get_wrong_fields {
-    my ($self) = @_;
+sub _get_key {
+    my ($self, $path_field) = @_;
 
-    my @fields = ();
-    foreach ($self->get_fields_with_error()) {
-        push(@fields, pop(@{$_->{'path'}}) || '');
-    }
+    $path_field //= [];
 
-    return @fields;
+    $path_field = [$path_field] unless ref($path_field) eq 'ARRAY';
+
+    return join(' => ', @$path_field);
 }
 
 TRUE;

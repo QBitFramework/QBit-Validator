@@ -4,18 +4,23 @@ use qbit;
 use QBit::Validator;
 
 #########
-# ARRAY #
+# type => 'array' #
 #########
 
-ok(QBit::Validator->new(data => undef, template => {ARRAY},)->has_errors, 'Use type ARRAY and data = undef');
+ok(QBit::Validator->new(data => undef, template => {type => 'array'},)->has_errors,
+    'Use type type => \'array\' and data = undef');
 
-ok(!QBit::Validator->new(data => undef, template => {ARRAY, OPT},)->has_errors, 'Use OPT and data = undef');
+ok(!QBit::Validator->new(data => undef, template => {type => 'array', optional => TRUE},)->has_errors,
+    'Use optional => TRUE and data = undef');
 
-ok(QBit::Validator->new(data => 'scalar', template => {ARRAY},)->has_errors, 'Use type ARRAY and data = scalar');
+ok(QBit::Validator->new(data => 'scalar', template => {type => 'array'},)->has_errors,
+    'Use type type => \'array\' and data = scalar');
 
-ok(QBit::Validator->new(data => {}, template => {ARRAY},)->has_errors, 'Use type ARRAY and data = hash');
+ok(QBit::Validator->new(data => {}, template => {type => 'array'},)->has_errors,
+    'Use type type => \'array\' and data = hash');
 
-ok(!QBit::Validator->new(data => [], template => {ARRAY},)->has_errors, 'Use type ARRAY and data = array');
+ok(!QBit::Validator->new(data => [], template => {type => 'array'},)->has_errors,
+    'Use type type => \'array\' and data = array');
 
 #
 # size_min
@@ -23,7 +28,7 @@ ok(!QBit::Validator->new(data => [], template => {ARRAY},)->has_errors, 'Use typ
 
 my $error;
 try {
-    QBit::Validator->new(data => [], template => {ARRAY, size_min => -3},);
+    QBit::Validator->new(data => [], template => {type => 'array', size_min => -3},);
 }
 catch {
     $error = TRUE;
@@ -34,7 +39,7 @@ ok(
     !QBit::Validator->new(
         data     => [1, 2],
         template => {
-            ARRAY,
+            type     => 'array',
             size_min => 1,
         },
       )->has_errors,
@@ -45,7 +50,7 @@ ok(
     QBit::Validator->new(
         data     => [1, 2],
         template => {
-            ARRAY,
+            type     => 'array',
             size_min => 3,
         },
       )->has_errors,
@@ -58,7 +63,7 @@ ok(
 
 $error = FALSE;
 try {
-    QBit::Validator->new(data => [], template => {ARRAY, size => undef},);
+    QBit::Validator->new(data => [], template => {type => 'array', size => undef},);
 }
 catch {
     $error = TRUE;
@@ -69,7 +74,7 @@ ok(
     !QBit::Validator->new(
         data     => [],
         template => {
-            ARRAY,
+            type => 'array',
             size => 0,
         },
       )->has_errors,
@@ -80,7 +85,7 @@ ok(
     QBit::Validator->new(
         data     => [1, 2],
         template => {
-            ARRAY,
+            type => 'array',
             size => 1,
         },
       )->has_errors,
@@ -93,7 +98,7 @@ ok(
 
 $error = FALSE;
 try {
-    QBit::Validator->new(data => [], template => {ARRAY, size_max => 3.4},);
+    QBit::Validator->new(data => [], template => {type => 'array', size_max => 3.4},);
 }
 catch {
     $error = TRUE;
@@ -104,7 +109,7 @@ ok(
     !QBit::Validator->new(
         data     => [1, 2],
         template => {
-            ARRAY,
+            type     => 'array',
             size_max => 3,
         },
       )->has_errors,
@@ -115,7 +120,7 @@ ok(
     QBit::Validator->new(
         data     => [1, 2],
         template => {
-            ARRAY,
+            type     => 'array',
             size_max => 1,
         },
       )->has_errors,
@@ -128,19 +133,19 @@ ok(
 
 $error = FALSE;
 try {
-    QBit::Validator->new(data => [], template => {ARRAY, all => undef},);
+    QBit::Validator->new(data => [], template => {type => 'array', all => undef},);
 }
 catch {
     $error = TRUE;
 };
-ok($error, 'Option "all" must be HASH');
+ok($error, 'Option "all" must be type => \'hash\'');
 
 ok(
     !QBit::Validator->new(
         data     => [1, 20, 300],
         template => {
-            ARRAY,
-            all => {},
+            type => 'array',
+            all  => {},
         },
       )->has_errors,
     'Option "all" (no error)'
@@ -150,8 +155,8 @@ ok(
     QBit::Validator->new(
         data     => [1, 20, 300],
         template => {
-            ARRAY,
-            all => {max => 30},
+            type => 'array',
+            all  => {max => 30},
         },
       )->has_errors,
     'Option "all" (error)'
@@ -163,19 +168,19 @@ ok(
 
 $error = FALSE;
 try {
-    QBit::Validator->new(data => [], template => {ARRAY, contents => undef},);
+    QBit::Validator->new(data => [], template => {type => 'array', contents => undef},);
 }
 catch {
     $error = TRUE;
 };
-ok($error, 'Option "contents" must be ARRAY');
+ok($error, 'Option "contents" must be type => \'array\'');
 
 ok(
     !QBit::Validator->new(
         data     => [1, {key => 2}, 'qbit'],
         template => {
-            ARRAY,
-            contents => [{}, {HASH, fields => {key => {}}}, {in => 'qbit'}],
+            type     => 'array',
+            contents => [{}, {type => 'hash', fields => {key => {}}}, {in => 'qbit'}],
         },
       )->has_errors,
     'Option "contents" (no error)'
@@ -185,8 +190,8 @@ ok(
     QBit::Validator->new(
         data     => [1, {key => 2}, 'qbit'],
         template => {
-            ARRAY,
-            contents => [{}, {HASH, key => {}},],
+            type     => 'array',
+            contents => [{}, {type => 'hash', key => {}},],
         },
       )->has_errors,
     'Option "contents" (error)'
@@ -198,7 +203,7 @@ ok(
 
 $error = FALSE;
 try {
-    QBit::Validator->new(data => [], template => {ARRAY, check => undef,},);
+    QBit::Validator->new(data => [], template => {type => 'array', check => undef,},);
 }
 catch {
     $error = TRUE;
@@ -209,9 +214,9 @@ ok(
     !QBit::Validator->new(
         data     => [1, 2, 3],
         template => {
-            ARRAY,
+            type  => 'array',
             check => sub {
-                $_[1]->[2] != $_[1]->[0] + $_[1]->[1] ? gettext('[2] must be equal [0] + [1]') : '';
+                throw FF gettext('[2] must be equal [0] + [1]') if $_[1]->[2] != $_[1]->[0] + $_[1]->[1];
             },
         },
       )->has_errors,
@@ -222,9 +227,9 @@ ok(
     QBit::Validator->new(
         data     => [1, 2, 4],
         template => {
-            ARRAY,
+            type  => 'array',
             check => sub {
-                $_[1]->[2] != $_[1]->[0] + $_[1]->[1] ? gettext('[2] must be equal [0] + [1]') : '';
+                throw FF gettext('[2] must be equal [0] + [1]') if $_[1]->[2] != $_[1]->[0] + $_[1]->[1];
             },
         },
       )->has_errors,

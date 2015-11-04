@@ -264,6 +264,6 @@ is(
               }
         },
       )->get_error,
-    gettext('Incorrect data'),
+    gettext('Internal error'),
     'Check right error'
   );

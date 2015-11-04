@@ -1,3 +1,9 @@
+libqbit-validator-perl (0.003) raring; urgency=low
+
+  * little fix and added new option "one_of"
+
+ -- Igor Sverdlov <igor-sverdlov@mail.ru>  Wed, 04 Nov 2015 20:03:49 +0300
+
 libqbit-validator-perl (0.002) raring; urgency=low
 
   * $template -> %$template

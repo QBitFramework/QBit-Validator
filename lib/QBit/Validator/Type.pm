@@ -20,6 +20,8 @@ sub check_options {
     if (exists($template->{'check'}) && !$qv->has_error(\@path_field)) {
         throw Exception::Validator gettext('Option "check" must be code')
           if !defined($template->{'check'}) || ref($template->{'check'}) ne 'CODE';
+          
+        return if !defined($data) && $template->{'optional'};
 
         my $error;
         try {
@@ -29,7 +31,7 @@ sub check_options {
             $error = shift->message;
         }
         catch {
-            $error = gettext('Incorrect data');
+            $error = gettext('Internal error');
         };
 
         $qv->_add_error($template, $error, @path_field) if $error;

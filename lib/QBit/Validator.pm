@@ -47,40 +47,24 @@ sub _validation {
 
     $template->{'type'} = [$template->{'type'}] unless ref($template->{'type'}) eq 'ARRAY';
 
-    foreach my $type (@{$template->{'type'}}) {
-        next if $self->has_error(\@path_field);
+    foreach my $type_name (@{$template->{'type'}}) {
+        last if $self->has_error(\@path_field);
 
-        unless (exists($self->{'__TYPES__'}{$type})) {
-            my $type_class = 'QBit::Validator::Type::' . $type;
-            my $type_fn    = "$type_class.pm";
-            $type_fn =~ s/::/\//g;
+        my $type = $self->_get_type_by_name($type_name);
 
-            try {
-                require $type_fn;
-            }
-            catch {
-                ldump(shift->message);
-                throw Exception::Validator gettext('Unknown type "%s"', $type);
-            };
-
-            $self->{'__TYPES__'}{$type} = $type_class->new();
-        }
-
-        if (!$self->has_error(\@path_field) && $self->{'__TYPES__'}{$type}->can('get_template')) {
-            my $new_template = {
-                %{$self->{'__TYPES__'}{$type}->get_template},
-                map {$_ => $template->{$_}} grep {$_ ne 'type'} keys(%$template)
-            };
+        if ($type->can('get_template')) {
+            my $new_template =
+              {%{$type->get_template}, map {$_ => $template->{$_}} grep {$_ ne 'type'} keys(%$template)};
 
             $self->_validation($data, $new_template, TRUE, @path_field);
         }
 
-        $self->{'__TYPES__'}{$type}->check_options($self, $data, $template, @path_field)
+        $type->check_options($self, $data, $template, @path_field)
           unless $self->has_error(\@path_field);
     }
 
     unless ($no_check_options) {
-        my $all_options = $self->_get_all_options_by_type($template->{'type'});
+        my $all_options = $self->_get_all_options_by_types($template->{'type'});
 
         my $diff = arrays_difference([keys(%$template)], $all_options);
 
@@ -88,22 +72,45 @@ sub _validation {
     }
 }
 
-sub _get_all_options_by_type {
-    my ($self, $types) = @_;
+sub _get_type_by_name {
+    my ($self, $type_name) = @_;
 
-    $types //= 'scalar';
-    $types = [$types] unless ref($types) eq 'ARRAY';
+    unless (exists($self->{'__TYPES__'}{$type_name})) {
+        my $type_class = 'QBit::Validator::Type::' . $type_name;
+        my $type_fn    = "$type_class.pm";
+        $type_fn =~ s/::/\//g;
+
+        try {
+            require $type_fn;
+        }
+        catch {
+            throw Exception::Validator gettext('Unknown type "%s"', $type_name);
+        };
+
+        $self->{'__TYPES__'}{$type_name} = $type_class->new();
+    }
+
+    return $self->{'__TYPES__'}{$type_name};
+}
+
+sub _get_all_options_by_types {
+    my ($self, $types_name) = @_;
+
+    $types_name //= 'scalar';
+    $types_name = [$types_name] unless ref($types_name) eq 'ARRAY';
 
     my %uniq_options = ();
 
-    foreach my $type (@$types) {
-        if ($self->{'__TYPES__'}{$type}->can('get_template')) {
-            my $template = $self->{'__TYPES__'}{$type}->get_template();
+    foreach my $type_name (@$types_name) {
+        my $type = $self->_get_type_by_name($type_name);
 
-            $uniq_options{$_} = TRUE foreach @{$self->_get_all_options_by_type($template->{'type'})};
+        if ($type->can('get_template')) {
+            my $template = $type->get_template();
+
+            $uniq_options{$_} = TRUE foreach @{$self->_get_all_options_by_types($template->{'type'})};
         }
 
-        $uniq_options{$_} = TRUE foreach $self->{'__TYPES__'}{$type}->get_options();
+        $uniq_options{$_} = TRUE foreach $type->get_options();
     }
 
     return [keys(%uniq_options)];

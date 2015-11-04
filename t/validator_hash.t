@@ -1,4 +1,4 @@
-use Test::More tests => 17;
+use Test::More tests => 24;
 
 use qbit;
 use QBit::Validator;
@@ -167,4 +167,126 @@ ok(
         },
       )->has_errors,
     'Use SKIP'
+  );
+  
+ #
+ # one_of
+ #
+ 
+$error = FALSE;
+try {
+    QBit::Validator->new(
+        data     => {key => 1},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {optional => TRUE},
+                key2 => {optional => TRUE},
+            },
+            one_of => 'key',
+        },
+      );
+}
+catch {
+    $error = TRUE;
+};
+ok($error, 'Option "one_of" must be ARRAY');
+
+$error = FALSE;
+try {
+    QBit::Validator->new(
+        data     => {key => 1},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {optional => TRUE},
+                key2 => {optional => TRUE},
+            },
+            one_of => ['key'],
+        },
+      );
+}
+catch {
+    $error = TRUE;
+};
+ok($error, 'Option "one_of" must be ARRAY with length more than 1');
+
+$error = FALSE;
+try {
+    QBit::Validator->new(
+        data     => {key => 1},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {optional => TRUE},
+                key2 => {optional => TRUE},
+            },
+            one_of => ['key', 'key3'],
+        },
+      );
+}
+catch {
+    $error = TRUE;
+};
+ok($error, 'Option "one_of" must be contain keys of option "fields"');
+
+ok(
+    QBit::Validator->new(
+        data     => {key3 => 1},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {optional => TRUE},
+                key2 => {optional => TRUE},
+                key3 => {optional => TRUE},
+            },
+            one_of => [qw(key key2)]
+        },
+      )->has_errors,
+    'Option "one_of" (error)'
+  );
+  
+ok(
+    QBit::Validator->new(
+        data     => {},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {optional => TRUE},
+                key2 => {optional => TRUE},
+            },
+            one_of => [qw(key key2)]
+        },
+      )->has_errors,
+    'Option "one_of" (error)'
+  );
+ 
+ok(
+    !QBit::Validator->new(
+        data     => {key => 1},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {optional => TRUE},
+                key2 => {optional => TRUE},
+            },
+            one_of => [qw(key key2)]
+        },
+      )->has_errors,
+    'Option "one_of" (no error)'
+  );
+  
+ok(
+    !QBit::Validator->new(
+        data     => {key => undef},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {optional => TRUE},
+                key2 => {optional => TRUE},
+            },
+            one_of => [qw(key key2)]
+        },
+      )->has_errors,
+    'Option "one_of" check only exists key'
   );

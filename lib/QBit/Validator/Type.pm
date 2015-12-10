@@ -10,7 +10,7 @@ sub check_options {
     my ($self, $qv, $data, $template, @path_field) = @_;
 
     if ($template->{'skip'}) {
-        $qv->_add_ok(@path_field);
+        $qv->_add_ok(\@path_field);
 
         return TRUE;
     }

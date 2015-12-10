@@ -64,7 +64,7 @@ sub size_min {
 
     if (@$data < $template->{$option}) {
         $qv->_add_error($template, gettext('Data size "%s" less then "%s"', scalar(@$data), $template->{$option}),
-            @path_field);
+            \@path_field);
 
         return FALSE;
     }
@@ -80,7 +80,7 @@ sub size {
 
     unless (@$data == $template->{$option}) {
         $qv->_add_error($template, gettext('Data size "%s" not equal "%s"', scalar(@$data), $template->{$option}),
-            @path_field);
+            \@path_field);
 
         return FALSE;
     }
@@ -96,7 +96,7 @@ sub size_max {
 
     if (@$data > $template->{$option}) {
         $qv->_add_error($template, gettext('Data size "%s" more than "%s"', scalar(@$data), $template->{$option}),
-            @path_field);
+            \@path_field);
 
         return FALSE;
     }
@@ -135,7 +135,7 @@ sub contents {
 
     if (@$data != @{$template->{$option}}) {
         $qv->_add_error($template,
-            gettext('Data size "%s" no equal "%s"', scalar(@$data), scalar(@{$template->{$option}})), @path_field);
+            gettext('Data size "%s" no equal "%s"', scalar(@$data), scalar(@{$template->{$option}})), \@path_field);
 
         return FALSE;
     }

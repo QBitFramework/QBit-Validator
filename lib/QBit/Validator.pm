@@ -81,15 +81,15 @@ sub _validation {
                 $template->{'check'}($self, $data, $template, @path_field);
             }
             catch Exception::Validator catch FF with {
-                $error = TRUE;
+                $error     = TRUE;
                 $error_msg = shift->message;
             }
             catch {
-                $error = TRUE;
+                $error     = TRUE;
                 $error_msg = gettext('Internal error');
             };
 
-            $self->_add_error($template, $error_msg, @path_field) if $error;
+            $self->_add_error($template, $error_msg, \@path_field, check_error => TRUE) if $error;
         }
     }
 
@@ -153,11 +153,16 @@ sub throw_exception {
 }
 
 sub _add_error {
-    my ($self, $template, $error, $field) = @_;
+    my ($self, $template, $error, $field, %opts) = @_;
 
     my $key = $self->_get_key($field);
 
-    if ($self->has_error($field)) {
+    if ($opts{'check_error'}) {
+        $self->{'__CHECK_FIELDS__'}{$key}{'error'} = {
+            msgs => [$error],
+            path => $field // []
+        };
+    } elsif ($self->has_error($field)) {
         push(@{$self->{'__CHECK_FIELDS__'}{$key}{'error'}{'msgs'}}, $error)
           unless exists($template->{'msg'});
     } else {

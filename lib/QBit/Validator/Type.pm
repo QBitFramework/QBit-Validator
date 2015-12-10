@@ -15,32 +15,6 @@ sub check_options {
         return TRUE;
     }
 
-    $self->_check_options($qv, $data, $template, @path_field);
-
-    if (exists($template->{'check'}) && !$qv->has_error(\@path_field)) {
-        throw Exception::Validator gettext('Option "check" must be code')
-          if !defined($template->{'check'}) || ref($template->{'check'}) ne 'CODE';
-          
-        return if !defined($data) && $template->{'optional'};
-
-        my $error;
-        try {
-            $template->{'check'}($qv, $data, $template, @path_field);
-        }
-        catch Exception::Validator catch FF with {
-            $error = shift->message;
-        }
-        catch {
-            $error = gettext('Internal error');
-        };
-
-        $qv->_add_error($template, $error, @path_field) if $error;
-    }
-}
-
-sub _check_options {
-    my ($self, $qv, $data, $template, @path_field) = @_;
-
     my @options =
       map {$_->{'name'}} grep {exists($template->{$_->{'name'}}) || $_->{'required'}} @{$self->_get_options()};
 

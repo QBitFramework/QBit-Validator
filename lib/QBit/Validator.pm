@@ -47,20 +47,50 @@ sub _validation {
 
     $template->{'type'} = [$template->{'type'}] unless ref($template->{'type'}) eq 'ARRAY';
 
+    my $already_check;
     foreach my $type_name (@{$template->{'type'}}) {
         last if $self->has_error(\@path_field);
 
         my $type = $self->_get_type_by_name($type_name);
 
         if ($type->can('get_template')) {
-            my $new_template =
-              {%{$type->get_template}, map {$_ => $template->{$_}} grep {$_ ne 'type'} keys(%$template)};
+            my $type_template = $type->get_template();
+
+            my $new_template = {
+                (map {$_ => $type_template->{$_}} grep {!exists($template->{$_})} keys(%$type_template)),
+                map {$_ => $template->{$_}} grep {$_ ne 'type' && $_ ne 'check'} keys(%$template)
+            };
 
             $self->_validation($data, $new_template, TRUE, @path_field);
         }
 
         $type->check_options($self, $data, $template, @path_field)
           unless $self->has_error(\@path_field);
+
+        if (exists($template->{'check'}) && !$already_check && !$self->has_error(\@path_field)) {
+            $already_check = TRUE;
+
+            throw Exception::Validator gettext('Option "check" must be code')
+              if !defined($template->{'check'}) || ref($template->{'check'}) ne 'CODE';
+
+            next if !defined($data) && $template->{'optional'};
+
+            my $error;
+            my $error_msg;
+            try {
+                $template->{'check'}($self, $data, $template, @path_field);
+            }
+            catch Exception::Validator catch FF with {
+                $error = TRUE;
+                $error_msg = shift->message;
+            }
+            catch {
+                $error = TRUE;
+                $error_msg = gettext('Internal error');
+            };
+
+            $self->_add_error($template, $error_msg, @path_field) if $error;
+        }
     }
 
     unless ($no_check_options) {

@@ -47,6 +47,12 @@ if ($qv->has_errors) {
 }
 ```
 
+  - data - return data
+
+```
+$self->db->table->edit($qv->data) unless $qv->has_errors;
+```
+
   - get_wrong_fields - return list name of fields with error
 
 ```

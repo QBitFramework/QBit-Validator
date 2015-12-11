@@ -12,9 +12,11 @@ use qbit;
 
 use base qw(QBit::Class);
 
-__PACKAGE__->mk_ro_accessors(qw(data template app));
+__PACKAGE__->mk_ro_accessors(qw(data app));
 
-my @available_fields = qw(data template app throw);
+__PACKAGE__->mk_accessors(qw(template));
+
+my @available_fields = qw(data template app throw pre_run);
 
 sub init {
     my ($self) = @_;
@@ -26,6 +28,13 @@ sub init {
     my @bad_fields = grep {!in_array($_, \@available_fields)} keys(%{$self});
     throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_fields))
       if @bad_fields;
+
+    if (exists($self->{'pre_run'})) {
+        throw Exception::Validator gettext('Option "pre_run" must be code')
+          if !defined($self->{'pre_run'}) || ref($self->{'pre_run'}) ne 'CODE';
+
+        $self->{'pre_run'}($self);
+    }
 
     $self->{'__CHECK_FIELDS__'} = {};
 
@@ -43,24 +52,59 @@ sub _validation {
     throw Exception::Validator gettext('Key "template" must be HASH')
       if !defined($template) || ref($template) ne 'HASH';
 
-    $template->{'type'} //= 'scalar';
+    $template->{'type'} //= ['scalar'];
 
     $template->{'type'} = [$template->{'type'}] unless ref($template->{'type'}) eq 'ARRAY';
 
+    my $already_check;
     foreach my $type_name (@{$template->{'type'}}) {
-        last if $self->has_error(\@path_field);
-
         my $type = $self->_get_type_by_name($type_name);
 
         if ($type->can('get_template')) {
-            my $new_template =
-              {%{$type->get_template}, map {$_ => $template->{$_}} grep {$_ ne 'type'} keys(%$template)};
+            my $type_template = $type->get_template();
+
+            my $new_template = {
+                (map {$_ => $type_template->{$_}} grep {!exists($template->{$_})} keys(%$type_template)),
+                map {$_ => $template->{$_}} grep {$_ ne 'type' && $_ ne 'check'} keys(%$template)
+            };
 
             $self->_validation($data, $new_template, TRUE, @path_field);
         }
 
-        $type->check_options($self, $data, $template, @path_field)
-          unless $self->has_error(\@path_field);
+        unless ($self->has_error(\@path_field)) {
+            $type->check_options($self, $data, $template, @path_field);
+        } else {
+            last;
+        }
+
+        if (exists($template->{'check'}) && !$already_check) {
+            $already_check = TRUE;
+
+            throw Exception::Validator gettext('Option "check" must be code')
+              if !defined($template->{'check'}) || ref($template->{'check'}) ne 'CODE';
+
+            next if !defined($data) && $template->{'optional'};
+
+            my $error;
+            my $error_msg;
+            try {
+                $template->{'check'}($self, $data, $template, @path_field);
+            }
+            catch Exception::Validator catch FF with {
+                $error     = TRUE;
+                $error_msg = shift->message;
+            }
+            catch {
+                $error     = TRUE;
+                $error_msg = gettext('Internal error');
+            };
+
+            if ($error) {
+                $self->_add_error($template, $error_msg, \@path_field, check_error => TRUE);
+
+                last;
+            }
+        }
     }
 
     unless ($no_check_options) {
@@ -110,7 +154,7 @@ sub _get_all_options_by_types {
             $uniq_options{$_} = TRUE foreach @{$self->_get_all_options_by_types($template->{'type'})};
         }
 
-        $uniq_options{$_} = TRUE foreach $type->get_options();
+        $uniq_options{$_} = TRUE foreach $type->get_all_options_name();
     }
 
     return [keys(%uniq_options)];
@@ -123,11 +167,16 @@ sub throw_exception {
 }
 
 sub _add_error {
-    my ($self, $template, $error, $field) = @_;
+    my ($self, $template, $error, $field, %opts) = @_;
 
     my $key = $self->_get_key($field);
 
-    if ($self->has_error($field)) {
+    if ($opts{'check_error'}) {
+        $self->{'__CHECK_FIELDS__'}{$key}{'error'} = {
+            msgs => [$error],
+            path => $field // []
+        };
+    } elsif ($self->has_error($field)) {
         push(@{$self->{'__CHECK_FIELDS__'}{$key}{'error'}{'msgs'}}, $error)
           unless exists($template->{'msg'});
     } else {

@@ -29,19 +29,10 @@ sub check_options {
     $qv->_add_ok(\@path_field);
 }
 
-sub get_options {
+sub get_all_options_name {
     my ($self) = @_;
 
-    my %options = (
-        skip  => TRUE,
-        type  => TRUE,
-        check => TRUE,
-        msg   => TRUE,
-    );
-
-    $options{$_} = TRUE foreach $self->_get_options_name();
-
-    return keys(%options);
+    return qw(skip type check msg), $self->_get_options_name();
 }
 
 TRUE;

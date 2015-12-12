@@ -39,6 +39,14 @@ my $qv = QBit::Validator->new(
 );
 ```
 
+  - template - get or set template
+
+```
+my $template = $qv->template;
+
+$qv->template($template);
+```
+
   - has_errors - return boolean result (TRUE if an error has occurred or FALSE)
 
 ```

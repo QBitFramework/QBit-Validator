@@ -1,3 +1,27 @@
+libqbit-validator-perl (0.006) raring; urgency=low
+
+  * rebuild
+
+  * added method template in README.md
+
+ -- Igor Sverdlov <igor-sverdlov@mail.ru>  Sun, 13 Dec 2015 00:46:45 +0300
+
+libqbit-validator-perl (0.005) raring; urgency=low
+
+  * Version 0.004
+
+  * added method data into README.md
+
+  * added README.md
+
+  * added pre_run and template - mk_accessors
+
+  * check error - main
+
+  * fix check
+
+ -- Igor Sverdlov <igor-sverdlov@mail.ru>  Sun, 13 Dec 2015 00:15:29 +0300
+
 libqbit-validator-perl (0.004) raring; urgency=low
 
   * added method data into README.md

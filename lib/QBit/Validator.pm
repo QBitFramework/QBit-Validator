@@ -64,7 +64,10 @@ sub _validation {
             my $type_template = $type->get_template();
 
             my $new_template = {
-                (map {$_ => $type_template->{$_}} grep {!exists($template->{$_})} keys(%$type_template)),
+                (
+                    map {$_ => $type_template->{$_}}
+                    grep {$_ eq 'type' || !exists($template->{$_})} keys(%$type_template)
+                ),
                 map {$_ => $template->{$_}} grep {$_ ne 'type' && $_ ne 'check'} keys(%$template)
             };
 
@@ -137,22 +140,60 @@ sub _get_type_by_name {
     return $self->{'__TYPES__'}{$type_name};
 }
 
-sub _get_all_options_by_types {
-    my ($self, $types_name) = @_;
+sub super_check {
+    my ($self, $type_name, @params) = @_;
 
-    $types_name //= 'scalar';
-    $types_name = [$types_name] unless ref($types_name) eq 'ARRAY';
+    my %types = map {$_ => TRUE} $self->_get_all_types($params[2]->{'type'});
 
-    my %uniq_options = ();
+    throw Exception::Validator gettext('You can not use sub "check" of type "%s" for this template', $type_name)
+      unless $types{$type_name};
 
-    foreach my $type_name (@$types_name) {
+    my $type = $self->_get_type_by_name($type_name);
+
+    throw Exception::Validator gettext('Do not exists sub "check" for type "%s"', $type_name)
+      unless $type->can('get_template');
+
+    my $type_template = $type->get_template();
+
+    throw Exception::Validator gettext('Do not exists sub "check" for type "%s"', $type_name)
+      unless exists($type_template->{'check'});
+
+    throw Exception::Validator gettext('Option "check" must be code')
+      if !defined($type_template->{'check'}) || ref($type_template->{'check'}) ne 'CODE';
+
+    $type_template->{'check'}(@params);
+}
+
+sub _get_all_types {
+    my ($self, $types) = @_;
+
+    $types //= ['scalar'];
+    $types = [$types] unless ref($types) eq 'ARRAY';
+
+    my %uniq_types = map {$_ => TRUE} @$types;
+
+    foreach my $type_name (@$types) {
         my $type = $self->_get_type_by_name($type_name);
 
         if ($type->can('get_template')) {
-            my $template = $type->get_template();
+            my $type_template = $type->get_template();
 
-            $uniq_options{$_} = TRUE foreach @{$self->_get_all_options_by_types($template->{'type'})};
+            $uniq_types{$_} = TRUE foreach $self->_get_all_types($type_template->{'type'});
         }
+    }
+
+    return sort(keys(%uniq_types));
+}
+
+sub _get_all_options_by_types {
+    my ($self, $types) = @_;
+
+    my @types_name = $self->_get_all_types($types);
+
+    my %uniq_options = ();
+
+    foreach my $type_name (@types_name) {
+        my $type = $self->_get_type_by_name($type_name);
 
         $uniq_options{$_} = TRUE foreach $type->get_all_options_name();
     }

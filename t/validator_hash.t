@@ -1,4 +1,5 @@
-use Test::More tests => 24;
+use Test::More tests => 28;
+use Test::Deep;
 
 use qbit;
 use QBit::Validator;
@@ -59,8 +60,10 @@ ok(
   );
 
 ok(
-    !QBit::Validator->new(data => {key => 1, key2 => 2}, template => {type => 'hash', extra => TRUE, fields => {key => {}}},)
-      ->has_errors,
+    !QBit::Validator->new(
+        data     => {key  => 1,      key2  => 2},
+        template => {type => 'hash', extra => TRUE, fields => {key => {}}},
+      )->has_errors,
     'Don\'t check extra keys with extra => TRUE'
   );
 
@@ -83,7 +86,8 @@ ok(
         template => {
             type  => 'hash',
             check => sub {
-                throw FF gettext('Key3 must be equal key + key2') if $_[1]->{'key3'} != $_[1]->{'key'} + $_[1]->{'key2'};
+                throw FF gettext('Key3 must be equal key + key2')
+                  if $_[1]->{'key3'} != $_[1]->{'key'} + $_[1]->{'key2'};
             },
             fields => {
                 key  => {},
@@ -101,7 +105,8 @@ ok(
         template => {
             type  => 'hash',
             check => sub {
-                throw FF gettext('Key3 must be equal key + key2') if $_[1]->{'key3'} != $_[1]->{'key'} + $_[1]->{'key2'};
+                throw FF gettext('Key3 must be equal key + key2')
+                  if $_[1]->{'key3'} != $_[1]->{'key'} + $_[1]->{'key2'};
             },
             fields => {
                 key  => {},
@@ -126,9 +131,7 @@ ok(
                 key  => {},
                 key2 => {},
             },
-            deps => {
-                key2 => 'key'
-            }
+            deps => {key2 => 'key'}
         },
       )->has_errors,
     'Option "deps" (no error)'
@@ -143,9 +146,7 @@ ok(
                 key  => {optional => TRUE},
                 key2 => {},
             },
-            deps => {
-                key2 => ['key'],
-            }
+            deps => {key2 => ['key'],}
         },
       )->has_errors,
     'Option "deps" (error)'
@@ -168,11 +169,11 @@ ok(
       )->has_errors,
     'Use SKIP'
   );
-  
- #
- # one_of
- #
- 
+
+#
+# one_of
+#
+
 $error = FALSE;
 try {
     QBit::Validator->new(
@@ -185,7 +186,7 @@ try {
             },
             one_of => 'key',
         },
-      );
+    );
 }
 catch {
     $error = TRUE;
@@ -204,7 +205,7 @@ try {
             },
             one_of => ['key'],
         },
-      );
+    );
 }
 catch {
     $error = TRUE;
@@ -223,7 +224,7 @@ try {
             },
             one_of => ['key', 'key3'],
         },
-      );
+    );
 }
 catch {
     $error = TRUE;
@@ -245,7 +246,7 @@ ok(
       )->has_errors,
     'Option "one_of" (error)'
   );
-  
+
 ok(
     QBit::Validator->new(
         data     => {},
@@ -260,7 +261,7 @@ ok(
       )->has_errors,
     'Option "one_of" (error)'
   );
- 
+
 ok(
     !QBit::Validator->new(
         data     => {key => 1},
@@ -275,7 +276,7 @@ ok(
       )->has_errors,
     'Option "one_of" (no error)'
   );
-  
+
 ok(
     !QBit::Validator->new(
         data     => {key => undef},
@@ -290,3 +291,73 @@ ok(
       )->has_errors,
     'Option "one_of" check only exists key'
   );
+
+#
+# check data to one error with deps
+#
+
+my $qv = QBit::Validator->new(
+    data => {
+        alt_width  => 0,
+        alt_height => -1,
+    },
+    template => {
+        type   => 'hash',
+        fields => {
+            alt_width  => {min => 1,},
+            alt_height => {min => 1,},
+        },
+    }
+);
+
+ok($qv->has_errors, 'Check errors');
+
+my @e = $qv->get_fields_with_error();
+
+cmp_deeply(
+    \@e,
+    [
+        {
+            'path' => ['alt_height'],
+            'msgs' => [gettext('Got value "-1" less then "1"')]
+        },
+        {
+            'path' => ['alt_width'],
+            'msgs' => [gettext('Got value "0" less then "1"')]
+        }
+    ],
+    'Two errors'
+);
+
+$qv = QBit::Validator->new(
+    data => {
+        alt_width  => 0,
+        alt_height => -1,
+    },
+    template => {
+        type   => 'hash',
+        fields => {
+            alt_width => {
+                deps => 'alt_height',
+                min  => 1,
+            },
+            alt_height => {min => 1,},
+        },
+        deps => {alt_width => 'alt_height'}
+    }
+);
+
+ok($qv->has_errors, 'Check errors');
+
+@e = $qv->get_fields_with_error();
+
+cmp_deeply(
+    \@e,
+    [
+        {
+            'path' => ['alt_height'],
+            'msgs' => [gettext('Got value "-1" less then "1"')]
+        }
+    ],
+    'One error'
+);

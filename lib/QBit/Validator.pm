@@ -297,3 +297,281 @@ sub _get_key {
 }
 
 TRUE;
+
+__END__
+
+=encoding utf8
+
+=head1 Name
+
+QBit::Validator - It is used for validation of input parameters.
+
+=head1 GitHub
+
+https://github.com/QBitFramework/QBit-Validator
+
+=head1 Install
+
+=over
+
+=item *
+
+cpanm QBit::Validator
+
+=item *
+
+apt-get install libqbit-validator-perl (http://perlhub.ru/)
+
+=back
+
+=head1 Package methods
+
+=head2 new
+
+create object QBit::Validator and check data using template
+
+B<Arguments:>
+
+=over
+
+=item
+
+B<data> - checking data
+
+=item
+
+B<template> - template for check
+
+=item
+
+B<pre_run> - function is executed before checking
+
+=item
+
+B<app> - model using in check
+
+=item
+
+B<throw> - throw (boolean type, throw exception if an error has occurred)
+
+=back
+
+B<Example:>
+
+  my $data = {
+      hello => 'hi, qbit-validator'
+  };
+
+  my $qv = QBit::Validator->new(
+      data => $data,
+      template => {
+          type => 'hash',
+          fields => {
+              hello => {
+                  max_len => 5,
+              },
+          },
+      },
+  );
+
+=head2 template
+
+get or set template
+
+B<Example:>
+
+  my $template = $qv->template;
+
+  $qv->template($template);
+
+=head2 has_errors
+
+return boolean result (TRUE if an error has occurred or FALSE)
+
+B<Example:>
+
+  if ($qv->has_errors) {
+      ...
+  }
+
+=head2 data
+
+return data
+
+B<Example:>
+
+  $self->db->table->edit($qv->data) unless $qv->has_errors;
+
+=head2 get_wrong_fields
+
+return list name of fields with error
+
+B<Example:>
+
+  if ($qv->has_errors) {
+      my @fields = $qv->get_wrong_fields;
+
+      ldump(\@fields); # ['hello']
+      # [''] - error in root
+  }
+
+=head2 get_fields_with_error
+
+return list fields with error
+
+B<Example:>
+
+  if ($qv->has_errors) {
+      my @fields = $qv->get_fields_with_error;
+
+      ldump(\@fields);
+
+      # [
+      #     {
+      #         msgs => ['Error'],
+      #         path => ['hello']
+      #     }
+      # ]
+      #
+      # path => [''] - error in root
+  }
+
+=head2 get_error
+
+return error by path
+
+B<Example:>
+
+  if ($qv->has_errors) {
+      my $error = $qv->get_error('hello'); # or ['hello']
+
+      print $error; # 'Error'
+  }
+
+=head2 get_all_errors
+
+return all errors join "\n"
+
+B<Example:>
+
+  if ($qv->has_errors) {
+      my $errors = $qv->get_all_errors();
+
+      print $errors; # 'Error'
+  }
+
+=head2 throw_exception
+
+throw Exception::Validator with error message from get_all_errors
+
+B<Example:>
+
+  $qv->throw_exception if $qv->has_errors;
+
+=head1 Default types
+
+=head2 scalar (string/number)
+
+=over
+
+=item
+
+optional
+
+=item
+
+eq
+
+=item
+
+regexp
+
+=item
+
+min
+
+=item
+
+max
+
+=item
+
+len_min
+
+=item
+
+len
+
+=item
+
+len_max
+
+=item
+
+in
+
+=back
+
+For more information see tests
+
+=head2 array (ref array)
+
+=over
+
+=item
+
+optional
+
+=item
+
+size_min
+
+=item
+
+size
+
+=item
+
+size_max
+
+=item
+
+all
+
+=item
+
+contents
+
+=back
+
+For more information see tests
+
+=head2 hash (ref hash)
+
+=over
+
+=item
+
+optional
+
+=item
+
+deps
+
+=item
+
+fields
+
+=item
+
+extra
+
+=item
+
+one_of
+
+=back
+
+For more information see tests
+
+=cut

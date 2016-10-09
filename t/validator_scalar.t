@@ -1,4 +1,4 @@
-use Test::More tests => 37;
+use Test::More tests => 38;
 
 use qbit;
 use QBit::Validator;
@@ -75,14 +75,9 @@ ok(QBit::Validator->new(data => 5, template => {min => 7},)->has_errors, 'Check 
 # eq
 #
 
-$error = FALSE;
-try {
-    QBit::Validator->new(data => 7, template => {eq => undef},);
-}
-catch {
-    $error = TRUE;
-};
-ok($error, 'Check "eq" for scalar (bad eq)');
+ok(!QBit::Validator->new(data => undef, template => {eq => undef},)->has_errors, 'Check "eq" for scalar (no error)');
+
+ok(QBit::Validator->new(data => 7, template => {eq => undef},)->has_errors, 'Check "eq" for scalar (error)');
 
 ok(!QBit::Validator->new(data => 7, template => {eq => 7},)->has_errors, 'Check "eq" for scalar (no error)');
 

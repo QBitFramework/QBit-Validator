@@ -16,7 +16,7 @@ __PACKAGE__->mk_ro_accessors(qw(data app));
 
 __PACKAGE__->mk_accessors(qw(template));
 
-my @available_fields = qw(data template app throw pre_run);
+my %available_fields = map {$_ => TRUE} qw(data template app throw pre_run);
 
 sub init {
     my ($self) = @_;
@@ -25,7 +25,7 @@ sub init {
         throw Exception::Validator gettext('Expected "%s"', $_) unless exists($self->{$_});
     }
 
-    my @bad_fields = grep {!in_array($_, \@available_fields)} keys(%{$self});
+    my @bad_fields = grep {!$available_fields{$_}} keys(%{$self});
     throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_fields))
       if @bad_fields;
 
@@ -66,7 +66,7 @@ sub _validation {
             my $new_template = {
                 (
                     map {$_ => $type_template->{$_}}
-                    grep {$_ eq 'type' || !exists($template->{$_})} keys(%$type_template)
+                      grep {$_ eq 'type' || !exists($template->{$_})} keys(%$type_template)
                 ),
                 map {$_ => $template->{$_}} grep {$_ ne 'type' && $_ ne 'check'} keys(%$template)
             };
@@ -257,7 +257,7 @@ sub get_fields_with_error {
     my ($self) = @_;
 
     return map {$self->{'__CHECK_FIELDS__'}{$_}{'error'}}
-      grep     {$self->{'__CHECK_FIELDS__'}{$_}{'error'}} keys(%{$self->{'__CHECK_FIELDS__'}});
+      grep     {$self->{'__CHECK_FIELDS__'}{$_}{'error'}} sort keys(%{$self->{'__CHECK_FIELDS__'}});
 }
 
 sub _add_ok {

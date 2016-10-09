@@ -56,7 +56,7 @@ sub eq {
 
     if (!defined($template->{$option})) {
         if (defined($data)) {
-            $self->_add_error($template, gettext('Data must be null'), \@path_field);
+            $qv->_add_error($template, gettext('Data must be null'), \@path_field);
 
             return FALSE;
         } else {

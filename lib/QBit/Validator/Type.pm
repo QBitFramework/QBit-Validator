@@ -20,11 +20,13 @@ sub check_options {
 
     foreach my $option (@options) {
         if ($self->can($option)) {
-            return FALSE unless $self->$option($qv, $data, $template, $option, @path_field);
+            last unless $self->$option($qv, $data, $template, $option, @path_field);
         } else {
             throw Exception::Validator gettext('Option "%s" don\'t have check sub', $option);
         }
     }
+
+    return FALSE if $qv->has_error(\@path_field);
 
     if (exists($template->{'check'}) && !$already_check) {
         $already_check = TRUE;

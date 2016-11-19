@@ -1,10 +1,58 @@
 ==================================================
-Changes from 2015-10-10 00:00:00 +0000 to present.
+Changes from 2015-11-20 00:00:00 +0000 to present.
 ==================================================
 
 ------------------------------------------
-version 0.007 at 2016-10-09 11:16:05 +0000
+version 0.008 at 2016-11-19 15:12:18 +0000
 ------------------------------------------
+
+  Change: 7e463956d40ca050e942acbb2fe1fea8c3666747
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-11-19 19:11:19 +0000
+
+    Merge pull request #10 from Madskill/fix_skip
+
+    Fix skip 
+
+  Change: e640d60a155c1d0d572e00efbc10c339eb4a092a
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-11-19 18:09:09 +0000
+
+    move check error 
+
+  Change: 5014822a11fbf65a5be088faf796a26a4a7e3c24
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-11-19 18:03:40 +0000
+
+    last if error 
+
+  Change: 6d4a091920f9a7581fa220c3aae46f1ded6178c8
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-11-19 17:46:26 +0000
+
+    Merge remote-tracking branch 'upstream/master' into upload_to_cpan 
+
+  Change: 4ea38339a7f9dbcf438571c57ed3fba5c3eab1f4
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-11-19 17:44:08 +0000
+
+    last 
+
+  Change: 189d82a6951bb2e56592d7f34d52e175f7afdfe8
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-11-19 17:28:06 +0000
+
+    move logic into type 
+
+------------------------------------------
+version 0.007 at 2016-10-09 11:16:17 +0000
+------------------------------------------
+
+  Change: 6eeef30ce7ec19555c611bf637e22d6bcf848f1d
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-10-09 14:16:17 +0000
+
+    Version 0.007 
 
   Change: 959c7e87c78660c3e22cdbcb9d5fa700d5c8f5b4
   Author: Igor <igor-sverdlov@mail.ru>
@@ -210,38 +258,6 @@ version 0.005 at 2015-12-12 21:15:29 +0000
 
     added new option "one_of" 
 
-------------------------------------------
-version 0.003 at 2015-11-04 17:03:57 +0000
-------------------------------------------
-
-  Change: 8015c30e08a7e7780497f767fb401ab169c3ccd7
-  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
-  Date : 2015-11-04 20:03:57 +0000
-
-    Version 0.003 
-
-  Change: 96c09fed54cd4d801abe2583d8bc29564064def4
-  Author: Igor <igor-sverdlov@mail.ru>
-  Date : 2015-11-04 19:44:35 +0000
-
-    Merge pull request #2 from Madskill/master
-
-    added new option "one_of" 
-
-  Change: 12a644d0cf5efbd0d149d1538064e2b3683bb13d
-  Author: Igor <igor-sverdlov@mail.ru>
-  Date : 2015-11-04 19:38:00 +0000
-
-    Merge pull request #1 from QBitFramework/master
-
-    fix code 
-
-  Change: 5c1f660f7477d9d9f7424b8624d6d94258e16fa0
-  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
-  Date : 2015-11-04 19:34:18 +0000
-
-    little fix and added new option "one_of" 
-
 ================================================
-Plus 2 releases after 2015-10-10 00:00:00 +0000.
+Plus 3 releases after 2015-11-20 00:00:00 +0000.
 ================================================

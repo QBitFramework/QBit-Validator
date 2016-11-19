@@ -1,3 +1,15 @@
+libqbit-validator-perl (0.008) raring; urgency=low
+
+  * move check error
+
+  * last if error
+
+  * last
+
+  * move logic into type
+
+ -- Igor Sverdlov <igor-sverdlov@mail.ru>  Sat, 19 Nov 2016 18:12:19 +0300
+
 libqbit-validator-perl (0.007) raring; urgency=low
 
   * added pod

@@ -1,3 +1,15 @@
+libqbit-validator-perl (0.007) raring; urgency=low
+
+  * added pod
+
+  * upload to cpan and fix error for scalar
+
+  * adde super_check
+
+  * added tests
+
+ -- Igor Sverdlov <igor-sverdlov@mail.ru>  Sun, 09 Oct 2016 14:16:05 +0300
+
 libqbit-validator-perl (0.006) raring; urgency=low
 
   * rebuild

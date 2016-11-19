@@ -1,0 +1,247 @@
+==================================================
+Changes from 2015-10-10 00:00:00 +0000 to present.
+==================================================
+
+------------------------------------------
+version 0.007 at 2016-10-09 11:16:05 +0000
+------------------------------------------
+
+  Change: 959c7e87c78660c3e22cdbcb9d5fa700d5c8f5b4
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-10-09 15:15:23 +0000
+
+    Merge pull request #9 from Madskill/upload_to_cpan
+
+    added pod 
+
+  Change: eab4e27f35e6f2c8c1fa5c0ef2c70c026483af41
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-10-09 14:13:43 +0000
+
+    added pod 
+
+  Change: 77014bbe05e0b89f3f2673ed6b9ebe8670e7a540
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-10-09 14:29:35 +0000
+
+    Merge pull request #8 from Madskill/upload_to_cpan
+
+    upload to cpan and fix error for scalar 
+
+  Change: 3af04727c198be63733b7e51751f2bcdc63eedb2
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-10-09 13:27:02 +0000
+
+    upload to cpan and fix error for scalar 
+
+  Change: 4b65348558d727eca62ecce4138176aac093a0a6
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-03-04 20:35:40 +0000
+
+    Merge pull request #7 from Madskill/master
+
+    added super_check 
+
+  Change: ea4367f6073e130586cb747e1e3c4d7ca418fa08
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-03-04 20:33:39 +0000
+
+    Merge pull request #8 from Madskill/add_test_with_deps
+
+    Add test with deps 
+
+  Change: 45cf0249625f17f5f8b777cbaeb41d4fc42436c8
+  Author: Igor Sverdlov <blizzard@yandex-team.ru>
+  Date : 2016-03-04 20:31:58 +0000
+
+    Merge branch 'master' of https://github.com/Madskill/QBit-Validator
+    into add_test_with_deps 
+
+  Change: e97f3e1dafa197ee8f63f1bf3e0e21c0c91d2238
+  Author: Igor Sverdlov <blizzard@yandex-team.ru>
+  Date : 2016-03-04 20:31:22 +0000
+
+    adde super_check 
+
+  Change: c876993b6300b8c90f6fd5bbd03bacb616414c21
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-03-04 15:06:00 +0000
+
+    Merge pull request #7 from Madskill/add_test_with_deps
+
+    Add test with deps 
+
+  Change: 0c3c5d63c1de56e591f1e7c6a733980d67b2496e
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-03-04 14:55:48 +0000
+
+    Merge pull request #6 from QBitFramework/master
+
+    Merge pull request #6 from Madskill/add_test_with_deps 
+
+  Change: 950dfbfc5d3efe6168ac78ecaadf98e11bd8fee4
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-03-04 14:54:50 +0000
+
+    Merge pull request #6 from Madskill/add_test_with_deps
+
+    Add test with deps 
+
+  Change: 69db778a200d3cee56853e96acdfa6c7eb44b523
+  Author: Igor Sverdlov <blizzard@yandex-team.ru>
+  Date : 2016-03-04 14:52:55 +0000
+
+    added tests 
+
+  Change: b6d9819bf1024b4b1eccf5efeb900268de995b38
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:47:59 +0000
+
+    Merge pull request #5 from QBitFramework/master
+
+    version 0.06 
+
+------------------------------------------
+version 0.006 at 2015-12-12 21:46:55 +0000
+------------------------------------------
+
+  Change: cb6177efd58137a83027d4d39da2c04babdb6d27
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:46:55 +0000
+
+    Version 0.006 
+
+  Change: 229d988fd84c351b00d47d4db6a37810f16d379e
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:45:06 +0000
+
+    Merge pull request #5 from Madskill/master
+
+    new version 
+
+  Change: a7069911f9412e8de8e3f91a3797190f28843b13
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:44:11 +0000
+
+    Merge pull request #4 from QBitFramework/master
+
+    new version 
+
+  Change: a7f13810dbec8ef795551c9dc0a37af482bd32b5
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:40:17 +0000
+
+    Merge branch 'master' of
+    https://github.com/QBitFramework/QBit-Validator 
+
+  Change: c9a07fe446aa9c3ad632a559a9a6ee40cb3a83f9
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:39:30 +0000
+
+    rebuild 
+
+  Change: 96d38da4d56f8d9a0d81021127a510555d2f8298
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:18:17 +0000
+
+    Merge pull request #3 from QBitFramework/master
+
+    new version 
+
+  Change: 1f9767ea1ed6ed445535ce80682ad6f303714123
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:12:43 +0000
+
+    added method template in README.md 
+
+------------------------------------------
+version 0.005 at 2015-12-12 21:15:29 +0000
+------------------------------------------
+
+  Change: 7adf30e90fa529c3c97c51f67fb87f9dc0067f13
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2015-12-13 00:15:29 +0000
+
+    Version 0.004 
+
+  Change: 978c7a78951d2c6959f81da88ed8e829107f53d0
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2015-12-11 23:07:17 +0000
+
+    Merge pull request #3 from Madskill/master
+
+    added README.md and fix check 
+
+  Change: 9095985ca574df5b9064872dbda1be25975dcfc1
+  Author: Igor Sverdlov <blizzard@yandex-team.ru>
+  Date : 2015-12-11 23:01:15 +0000
+
+    added method data into README.md 
+
+  Change: 931942c0ec555de29d002fa817d951a898961d36
+  Author: Igor Sverdlov <blizzard@yandex-team.ru>
+  Date : 2015-12-11 22:56:52 +0000
+
+    added README.md 
+
+  Change: 3d2d2f5a14b084180387d29e45cce9ba8f4cc4f0
+  Author: Igor Sverdlov <blizzard@yandex-team.ru>
+  Date : 2015-12-11 22:03:18 +0000
+
+    added pre_run and template - mk_accessors 
+
+  Change: 74d5e5878c8b762f7012ace6ab321ae5e1b914ee
+  Author: Igor Sverdlov <blizzard@yandex-team.ru>
+  Date : 2015-12-10 19:37:22 +0000
+
+    check error - main 
+
+  Change: b1c714369dcf6b6aa9817434dcf61e992f9558e1
+  Author: Igor Sverdlov <blizzard@yandex-team.ru>
+  Date : 2015-12-10 19:15:24 +0000
+
+    fix check 
+
+  Change: 9a949f6f79938b074d38292e4ae4d9df33f9a398
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2015-11-04 20:08:20 +0000
+
+    Merge pull request #2 from QBitFramework/master
+
+    added new option "one_of" 
+
+------------------------------------------
+version 0.003 at 2015-11-04 17:03:57 +0000
+------------------------------------------
+
+  Change: 8015c30e08a7e7780497f767fb401ab169c3ccd7
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2015-11-04 20:03:57 +0000
+
+    Version 0.003 
+
+  Change: 96c09fed54cd4d801abe2583d8bc29564064def4
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2015-11-04 19:44:35 +0000
+
+    Merge pull request #2 from Madskill/master
+
+    added new option "one_of" 
+
+  Change: 12a644d0cf5efbd0d149d1538064e2b3683bb13d
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2015-11-04 19:38:00 +0000
+
+    Merge pull request #1 from QBitFramework/master
+
+    fix code 
+
+  Change: 5c1f660f7477d9d9f7424b8624d6d94258e16fa0
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2015-11-04 19:34:18 +0000
+
+    little fix and added new option "one_of" 
+
+================================================
+Plus 2 releases after 2015-10-10 00:00:00 +0000.
+================================================

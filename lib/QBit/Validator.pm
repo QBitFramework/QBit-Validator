@@ -61,53 +61,12 @@ sub _validation {
         my $type = $self->_get_type_by_name($type_name);
 
         if ($type->can('get_template')) {
-            my $type_template = $type->get_template();
-
-            my $new_template = {
-                (
-                    map {$_ => $type_template->{$_}}
-                      grep {$_ eq 'type' || !exists($template->{$_})} keys(%$type_template)
-                ),
-                map {$_ => $template->{$_}} grep {$_ ne 'type' && $_ ne 'check'} keys(%$template)
-            };
+            my $new_template = $type->merge_templates($template, $type->get_template());
 
             $self->_validation($data, $new_template, TRUE, @path_field);
         }
-
-        unless ($self->has_error(\@path_field)) {
-            $type->check_options($self, $data, $template, @path_field);
-        } else {
-            last;
-        }
-
-        if (exists($template->{'check'}) && !$already_check) {
-            $already_check = TRUE;
-
-            throw Exception::Validator gettext('Option "check" must be code')
-              if !defined($template->{'check'}) || ref($template->{'check'}) ne 'CODE';
-
-            next if !defined($data) && $template->{'optional'};
-
-            my $error;
-            my $error_msg;
-            try {
-                $template->{'check'}($self, $data, $template, @path_field);
-            }
-            catch Exception::Validator catch FF with {
-                $error     = TRUE;
-                $error_msg = shift->message;
-            }
-            catch {
-                $error     = TRUE;
-                $error_msg = gettext('Internal error');
-            };
-
-            if ($error) {
-                $self->_add_error($template, $error_msg, \@path_field, check_error => TRUE);
-
-                last;
-            }
-        }
+        
+        last unless $type->check_options($self, $data, $template, $already_check, @path_field);
     }
 
     unless ($no_check_options) {

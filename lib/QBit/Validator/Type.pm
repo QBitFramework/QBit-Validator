@@ -9,6 +9,8 @@ __PACKAGE__->abstract_methods(qw(_get_options _get_options_name));
 sub check_options {
     my ($self, $qv, $data, $template, $already_check, @path_field) = @_;
 
+    return FALSE if $qv->has_error(\@path_field);
+
     if ($template->{'skip'}) {
         $qv->_add_ok(\@path_field);
 

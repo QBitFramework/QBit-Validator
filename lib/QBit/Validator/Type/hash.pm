@@ -10,6 +10,7 @@ my $OPTIONS = [
     {name => 'deps'},
     {name => 'fields'},
     {name => 'one_of'},
+    {name => 'any_of'},
     {name => 'extra',    required => TRUE},
 ];
 
@@ -150,6 +151,36 @@ sub one_of {
 
     unless (@received_fields == 1) {
         $qv->_add_error($template, gettext('Expected one key from: %s', join(', ', @{$template->{$option}})),
+            \@path_field);
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+sub any_of {
+    my ($self, $qv, $data, $template, $option, @path_field) = @_;
+
+    throw Exception::Validator gettext('Option "%s" must be ARRAY', $option)
+      if ref($template->{$option}) ne 'ARRAY';
+
+    my $min_size = 2;
+
+    throw Exception::Validator gettext('Option "%s" have size "%s", but expected size equal or more than "%s"',
+        $option, scalar(@{$template->{$option}}), $min_size)
+      if @{$template->{$option}} < $min_size;
+
+    my @received_fields = ();
+    foreach my $field (@{$template->{$option}}) {
+        throw Exception::Validator gettext('Key "%s" do not use in option "fields"', $field)
+          unless exists($template->{'fields'}{$field});
+
+        push(@received_fields, $field) if exists($data->{$field});
+    }
+
+    unless (@received_fields) {
+        $qv->_add_error($template, gettext('Expected any keys from: %s', join(', ', @{$template->{$option}})),
             \@path_field);
 
         return FALSE;

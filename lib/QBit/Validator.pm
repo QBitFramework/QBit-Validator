@@ -529,6 +529,10 @@ extra
 
 one_of
 
+=item
+
+any_of
+
 =back
 
 For more information see tests

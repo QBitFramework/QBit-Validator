@@ -159,5 +159,6 @@ $qv->throw_exception if $qv->has_errors;
     - fields
     - extra
     - one_of
+    - any_of
 
     For more information see tests

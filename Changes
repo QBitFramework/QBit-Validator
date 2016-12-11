@@ -1,10 +1,48 @@
 ==================================================
-Changes from 2015-11-20 00:00:00 +0000 to present.
+Changes from 2015-12-12 00:00:00 +0000 to present.
 ==================================================
 
 ------------------------------------------
-version 0.008 at 2016-11-19 15:12:18 +0000
+version 0.009 at 2016-12-11 00:00:59 +0000
 ------------------------------------------
+
+  Change: 0ca56e6184ea8114f0024c4af7a47f963696a381
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-12-11 03:00:11 +0000
+
+    Merge pull request #12 from Madskill/any_of_for_hash
+
+    added documentation 
+
+  Change: 0f2f881f936087b003c4ffc754eb8395e5c5391b
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-12-11 02:59:19 +0000
+
+    added documentation 
+
+  Change: 5d9367adca21717ba48f4b2b03492a7cb520dc8e
+  Author: Igor <igor-sverdlov@mail.ru>
+  Date : 2016-12-11 02:57:27 +0000
+
+    Merge pull request #11 from Madskill/any_of_for_hash
+
+    added new option 'any_of' for hash 
+
+  Change: f4443da4a328687624e55f5c98ac78f01a4479a1
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-12-11 02:56:13 +0000
+
+    added new option 'any_of' for hash 
+
+------------------------------------------
+version 0.008 at 2016-11-19 15:12:34 +0000
+------------------------------------------
+
+  Change: 9898ee802b79be5fbcd181126aad9c83ae86c172
+  Author: Igor Sverdlov <igor-sverdlov@mail.ru>
+  Date : 2016-11-19 18:12:34 +0000
+
+    Version 0.008 
 
   Change: 7e463956d40ca050e942acbb2fe1fea8c3666747
   Author: Igor <igor-sverdlov@mail.ru>
@@ -259,5 +297,5 @@ version 0.005 at 2015-12-12 21:15:29 +0000
     added new option "one_of" 
 
 ================================================
-Plus 3 releases after 2015-11-20 00:00:00 +0000.
+Plus 3 releases after 2015-12-12 00:00:00 +0000.
 ================================================

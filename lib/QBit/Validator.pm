@@ -65,8 +65,8 @@ sub _validation {
 
             $self->_validation($data, $new_template, TRUE, @path_field);
         }
-        
-        last unless $type->check_options($self, $data, $template, $already_check, @path_field);
+
+        last unless $type->check_options($self, $data, $template, \$already_check, @path_field);
     }
 
     unless ($no_check_options) {

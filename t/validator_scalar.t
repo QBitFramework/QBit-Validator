@@ -1,4 +1,4 @@
-use Test::More tests => 38;
+use Test::More tests => 39;
 
 use qbit;
 use QBit::Validator;
@@ -209,6 +209,20 @@ ok(
         },
       )->has_errors,
     'Option "check" (error)'
+  );
+
+ok(
+    !QBit::Validator->new(
+        data     => undef,
+        template => {
+            optional => TRUE,
+            check    => sub {
+                throw FF gettext('Must be defined')
+                  unless defined($_[1]);
+            },
+        },
+      )->has_errors,
+    'Option "check" not running (no error)'
   );
 
 #

@@ -30,13 +30,17 @@ sub check_options {
 
     return FALSE if $qv->has_error(\@path_field);
 
-    if (exists($template->{'check'}) && !$already_check) {
-        $already_check = TRUE;
+    if (exists($template->{'check'}) && !$$already_check) {
+        $$already_check = TRUE;
 
         throw Exception::Validator gettext('Option "check" must be code')
           if !defined($template->{'check'}) || ref($template->{'check'}) ne 'CODE';
 
-        next if !defined($data) && $template->{'optional'};
+        if (!defined($data) && $template->{'optional'}) {
+            $qv->_add_ok(\@path_field);
+
+            return TRUE;
+        }
 
         my $error;
         my $error_msg;

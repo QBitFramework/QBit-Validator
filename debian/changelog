@@ -1,3 +1,9 @@
+libqbit-validator-perl (0.010) raring; urgency=low
+
+  * next => return and use ref
+
+ -- Igor Sverdlov <igor-sverdlov@mail.ru>  Sun, 23 Apr 2017 14:45:45 +0300
+
 libqbit-validator-perl (0.009) raring; urgency=low
 
   * added documentation

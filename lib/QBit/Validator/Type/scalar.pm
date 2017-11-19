@@ -4,6 +4,8 @@ use qbit;
 
 use base qw(QBit::Validator::Type);
 
+use Exception::Validator;
+
 #order is important
 my $OPTIONS = [
     {name => 'optional', required => TRUE},

@@ -1,16 +1,10 @@
-package Exception::Validator;
-
-use base qw(Exception);
-
-package FF;
-
-use base qw(Exception::Validator);
-
 package QBit::Validator;
 
 use qbit;
 
 use base qw(QBit::Class);
+
+use Exception::Validator;
 
 __PACKAGE__->mk_ro_accessors(qw(data app));
 

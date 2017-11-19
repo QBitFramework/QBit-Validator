@@ -583,7 +583,6 @@ ok(
                     fields => [qw(key key2)],
                     cases  => [[{key => {eq => 2}, key2 => {eq => 2}}, {eq => 2}], [{key => {eq => 2}}, {eq => undef}],]
                 },
-
             }
         },
       )->has_errors,

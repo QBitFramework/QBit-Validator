@@ -10,11 +10,11 @@ use Exception::Validator;
 #TODO: write type "variable"
 #TODO: Benchmark (one create vs more and more create vs more)
 
-__PACKAGE__->mk_ro_accessors(qw(app));
+__PACKAGE__->mk_ro_accessors(qw(app parent));
 
-__PACKAGE__->mk_accessors(qw(template data dpath));
+__PACKAGE__->mk_accessors(qw(template dpath));    #data
 
-my %available_fields = map {$_ => TRUE} qw(data template app throw pre_run dpath);
+my %available_fields = map {$_ => TRUE} qw(data template app throw pre_run dpath parent);
 
 sub init {
     my ($self) = @_;
@@ -22,6 +22,9 @@ sub init {
     foreach (qw(template)) {
         throw Exception::Validator gettext('Expected "%s"', $_) unless exists($self->{$_});
     }
+
+    throw Exception::Validator gettext('Option "parent" must be QBit::Validator')
+      if defined($self->parent) && (!blessed($self->parent) || !$self->parent->isa('QBit::Validator'));
 
     my @bad_fields = grep {!$available_fields{$_}} keys(%{$self});
     throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_fields))
@@ -37,8 +40,6 @@ sub init {
     $self->{'dpath'} //= '/';
 
     $self->_init_template();
-
-    my $data = $self->data;
 
     $self->validate($self->data) if exists($self->{'data'});
 
@@ -60,16 +61,30 @@ sub _init_template {
     push(@{$self->{'__CHECKS__'}}, $type_obj->get_checks_by_template($self, $final_template, []));
 }
 
+sub data {
+    my ($self, @params) = @_;
+
+    if (@params) {
+        $self->{'data'} = $params[0];
+    }
+
+    if (defined($self->parent)) {
+        return $self->parent->data;
+    }
+
+    $self->{'data'};
+}
+
 sub _get_type_and_template {
     my ($self, $template) = @_;
 
     my $exists_check = exists($template->{'check'});
-    my $check = delete($template->{'check'});
+    my $check        = delete($template->{'check'});
 
     throw Exception::Validator gettext('Option "%s" must be defined', 'check')
       if $exists_check && !defined($check);
 
-    my $type  = delete($template->{'type'}) // 'scalar';
+    my $type = delete($template->{'type'}) // 'scalar';
 
     my $type_obj = $self->_get_type_by_name($type);
 
@@ -97,8 +112,16 @@ sub _get_type_and_template {
 sub validate {
     my ($self, $data) = @_;
 
-    #TODO: прокидывать data в глубь
-    $self->data($data) unless $self->{'data'};
+    $self->data($data);
+
+    return $self->_validate($data);
+}
+
+sub _validate {
+    my ($self, $data) = @_;
+
+    delete($self->{'__ERRORS__'});
+    delete($self->{'__FIELDS_WITH_ERRORS__'});
 
     my @checks = @{$self->{'__CHECKS__'}};
 
@@ -118,7 +141,7 @@ sub validate {
             $error = $self->{'__CUSTOM_ERRORS__'};
         }
 
-        push(@{$self->{'__ERRORS__'}}, $error);
+        $self->{'__ERRORS__'} = $error;
 
         $res = FALSE;
     };
@@ -126,9 +149,7 @@ sub validate {
     return $res;
 }
 
-sub get_errors {
-    $_[0]->{'__ERRORS__'} // [];
-}
+sub get_errors {$_[0]->{'__ERRORS__'}}
 
 sub _get_type_by_name {
     my ($self, $type_name) = @_;
@@ -184,21 +205,25 @@ sub get_error {
 sub get_fields_with_error {
     my ($self) = @_;
 
-    my $errors = $self->get_errors;
+    unless (exists($self->{'__FIELDS_WITH_ERRORS__'})) {
+        my $errors = $self->get_errors;
 
-    my @res = ();
-    foreach my $err (@$errors) {
-        push(@res, _get_node([], $err));
+        #TODO: cached hash {'/a/b' => 'error'}
+        $self->{'__FIELDS_WITH_ERRORS__'} = defined($errors) ? [_get_nodes([], $errors)] : undef;
     }
 
-    return @res;
+    return @{$self->{'__FIELDS_WITH_ERRORS__'}};
 }
 
-sub _get_node {
+sub get_errors_as_hash {
+    #TODO: use get_fields_with_error and save result
+}
+
+sub _get_nodes {
     if (ref($_[1]) eq 'HASH') {
-        return map {_get_node([@{$_[0]}, $_], $_[1]->{$_})} sort keys(%{$_[1]});
+        return map {_get_nodes([@{$_[0]}, $_], $_[1]->{$_})} sort keys(%{$_[1]});
     } else {
-        return {path => $_[0], msgs => ref($_[1]) eq 'ARRAY' ? $_[1] : [$_[1]]};
+        return {path => $_[0], message => $_[1]};
     }
 }
 
@@ -215,17 +240,19 @@ sub has_error {
 }
 
 sub has_errors {
-    return scalar(@{$_[0]->{'__ERRORS__'} // []});
+    return defined($_[0]->{'__ERRORS__'});
 }
 
 sub _get_key {
     my ($self, $path_field) = @_;
 
     $path_field //= [];
-
     $path_field = [$path_field] unless ref($path_field) eq 'ARRAY';
 
-    return join(' => ', @$path_field);
+    $path_field = join('/', @$path_field);
+    $path_field = '/' . $path_field unless $path_field =~ /^\//;
+
+    return $path_field;
 }
 
 TRUE;

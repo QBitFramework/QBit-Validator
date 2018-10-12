@@ -76,12 +76,9 @@ sub _get_field_order {
 sub fields {
     my ($qv, $fields, $template) = @_;
 
-    my $data = $qv->data;
     my %validators = ();
     foreach my $field (keys(%$fields)) {
-        $validators{$field} = QBit::Validator->new(template => $fields->{$field}, dpath => $qv->dpath . "$field/");
-
-        $validators{$field}->data($data);
+        $validators{$field} = QBit::Validator->new(template => $fields->{$field}, parent => $qv, dpath => $qv->dpath . "$field/");
     }
 
     my $inverse_depends = $qv->{'__INVERSE_DEPENDS__'} // {};
@@ -94,7 +91,7 @@ sub fields {
         foreach my $field (@sorted_fields) {
             next if $errors{$field};
 
-            unless ($validators{$field}->validate($_[1]->{$field})) {
+            unless ($validators{$field}->_validate($_[1]->{$field})) {
                 $errors{$field} = $validators{$field}->get_errors;
 
                 _set_recursive_depends_errors($field, \%errors, $inverse_depends);

@@ -64,17 +64,17 @@ sub all {
 
     my $dpath = $qv->dpath;
 
-    my $new_qv = QBit::Validator->new(template => $template);
-    $new_qv->data($qv->data);
+    my $validator = QBit::Validator->new(template => $template, parent => $qv);
 
     return sub {
         my %errors = ();
         my $num    = 0;
         foreach (@{$_[1]}) {
-            $new_qv->dpath($dpath . "$num/");
+            #TODO: fix it
+            $validator->dpath($dpath . "$num/");
 
-            unless ($new_qv->validate($_)) {
-                $errors{$num} = $new_qv->get_errors;
+            unless ($validator->_validate($_)) {
+                $errors{$num} = $validator->get_errors;
             }
 
             $num++;
@@ -93,14 +93,11 @@ sub contents {
       if !defined($templates) || ref($templates) ne 'ARRAY';
 
     my $dpath = $qv->dpath;
-    my $data = $qv->data;
 
     my @validators = ();
     my $i = 0;
     foreach my $template (@$templates) {
-        my $validator = QBit::Validator->new(template => $template, dpath => $dpath . "$i/");
-
-        $validator->data($data);
+        my $validator = QBit::Validator->new(template => $template, parent => $qv, dpath => $dpath . "$i/");
 
         push(@validators, $validator);
 
@@ -114,7 +111,7 @@ sub contents {
         my %errors = ();
         my $num    = 0;
         foreach (@{$_[1]}) {
-            unless ($validators[$num]->validate($_)) {
+            unless ($validators[$num]->_validate($_)) {
                 $errors{$num} = $validators[$num]->get_errors;
             }
 

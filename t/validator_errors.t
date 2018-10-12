@@ -1,4 +1,5 @@
-use Test::More tests => 23;
+use Test::More tests => 13;
+use Test::Deep;
 
 use qbit;
 use QBit::Validator;
@@ -25,7 +26,7 @@ my $validator = QBit::Validator->new(
                     if ($qv->data->{'password'} ne $password2) {
                         throw FF 'password and password2 must be equals';
                     }
-                }
+                  }
             },
             person => {
                 type   => 'hash',
@@ -43,26 +44,22 @@ my $validator = QBit::Validator->new(
                         check => sub {
                             my ($qv, $height) = @_;
 
-                            ldump($qv);
-
                             my $error = FALSE;
-                            if ($qv->data->{'gender'} eq 'm') {
+                            if ($qv->data->{'person'}{'gender'} eq 'm') {
                                 $error = TRUE unless $height > 48 && $height < 272;
-                            } elsif ($qv->data->{'gender'} eq 'w') {
+                            } elsif ($qv->data->{'person'}{'gender'} eq 'w') {
                                 $error = TRUE unless $height > 55 && $height < 232;
                             }
 
                             throw FF 'Enter your height' if $error;
-                        }
+                          }
                     },
                     weight => {
                         min => 2,
                         max => 570,
                     },
                 },
-                deps => {
-                    height => 'gender',
-                },
+                deps => {height => 'gender',},
             },
             contacts => {
                 type   => 'hash',
@@ -89,13 +86,11 @@ my $validator = QBit::Validator->new(
                 ]
             }
         },
-        deps => {
-            password2 => 'password',
-        },
+        deps => {password2 => 'password',},
     }
 );
 
-my $result = $validator->validate(
+$validator->validate(
     {
         login     => '_l0gin',
         password  => 's3cret',
@@ -107,19 +102,80 @@ my $result = $validator->validate(
             gender     => 'w',
             height     => 54,
         },
-        contacts => {
-            facebook => 'anna-white',
-        },
-        pets => [
+        contacts => {facebook => 'anna-white',},
+        pets     => [
             'cat',
             {
                 name  => 'babu',
                 breed => 'no'
             }
         ],
-        aaaa => 'fuck!!!'
+        extra_key => "Don't check"
     }
 );
 
-#ldump($validator, $result);
+ok($validator->has_errors, 'has errors');
+
+cmp_deeply(
+    $validator->get_errors,
+    {
+        'password2' => 'password and password2 must be equals',
+        'contacts'  => 'Extra fields: facebook',
+        'person'    => {
+            'weight' => 'Data must be defined',
+            'height' => 'Enter your height',
+            'age'    => 'Got value "14" less then "18"'
+        },
+        'pets' => {'1' => {'breed' => 'Length "no" less then "3"'}},
+        'login' => 'Login can contain any letters a to z and any numbers from 0 through 9'
+    },
+    'get_errors'
+);
+
+cmp_deeply(
+    [$validator->get_fields_with_error],
+    [
+        {
+            'path'    => ['contacts'],
+            'message' => 'Extra fields: facebook'
+        },
+        {
+            'path'    => ['login'],
+            'message' => 'Login can contain any letters a to z and any numbers from 0 through 9'
+        },
+        {
+            'path'    => ['password2'],
+            'message' => 'password and password2 must be equals'
+        },
+        {
+            'path'    => ['person', 'age'],
+            'message' => 'Got value "14" less then "18"'
+        },
+        {
+            'path'    => ['person', 'height'],
+            'message' => 'Enter your height'
+        },
+        {
+            'path'    => ['person', 'weight'],
+            'message' => 'Data must be defined'
+        },
+        {
+            'path'    => ['pets', '1', 'breed'],
+            'message' => 'Length "no" less then "3"'
+        }
+    ],
+    'get_fields_with_error'
+);
+
+ok($validator->has_error('contacts'),    'contracts has error');
+ok($validator->has_error(['login']),     'login has error');
+ok($validator->has_error('/person/age'), 'person.age has error');
+ok($validator->has_error(['person', 'height']), 'person.height has error');
+ok($validator->has_error('/pets/1/breed'), 'pets[1].breed has error');
+ok($validator->has_error(['pets', '1', 'breed']), 'pets[1].breed has error (dpath as array)');
+
+ok(!$validator->has_error('password'),   'password has not error');
+ok(!$validator->has_error(['password']), 'password has not error (dpath as array)');
+ok(!$validator->has_error(['person', 'first-name']), 'person.first_name has not error');
+ok(!$validator->has_error('/person/first_name'), 'person.first_name has not error');
 

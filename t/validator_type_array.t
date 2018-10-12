@@ -192,7 +192,7 @@ ok(
         data     => [1, {key => 2}, 'qbit'],
         template => {
             type     => 'array',
-            contents => [{}, {type => 'hash', key => {}},],
+            contents => [{}, {type => 'hash', fields => {key => {}}},],
         },
       )->has_errors,
     'Option "contents" (error)'

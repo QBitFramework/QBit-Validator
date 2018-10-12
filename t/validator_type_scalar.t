@@ -194,7 +194,7 @@ ok(
         template => {
             check => sub {
                 throw FF gettext('Data must be equal "qbit"') if $_[1] ne 'qbit';
-              }
+            }
         },
       )->has_errors,
     'Option "check" (no error)'
@@ -206,7 +206,7 @@ ok(
         template => {
             check => sub {
                 throw FF gettext('Data must be no equal 5') if $_[1] == 5;
-              }
+            }
         },
       )->has_errors,
     'Option "check" (error)'
@@ -271,7 +271,7 @@ is(
         template => {
             check => sub {
                 throw FF gettext('Data must be equal 5') if $_[1] != 5;
-              }
+            }
         },
       )->get_error,
     gettext('Internal error'),

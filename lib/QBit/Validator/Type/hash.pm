@@ -12,6 +12,12 @@ sub get_options_name {
     qw(type deps fields one_of any_of extra);
 }
 
+sub pre_process_template {
+    my ($self, $template) = @_;
+
+    $template->{'extra'} //= FALSE;
+}
+
 sub type {
     my ($qv, $types) = @_;
 
@@ -78,7 +84,8 @@ sub fields {
 
     my %validators = ();
     foreach my $field (keys(%$fields)) {
-        $validators{$field} = QBit::Validator->new(template => $fields->{$field}, parent => $qv, dpath => $qv->dpath . "$field/");
+        $validators{$field} =
+          QBit::Validator->new(template => $fields->{$field}, parent => $qv, dpath => $qv->dpath . "$field/");
     }
 
     my $inverse_depends = $qv->{'__INVERSE_DEPENDS__'} // {};

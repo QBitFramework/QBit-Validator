@@ -10,7 +10,7 @@ use Exception::Validator::FailedField;
 sub get_all_options_name {
     my ($self) = @_;
 
-    return qw(msg skip optional), $self->get_options_name(), qw(check);
+    return qw(message msg skip optional), $self->get_options_name(), qw(check);
 }
 
 sub get_options_name {()}
@@ -18,12 +18,7 @@ sub get_options_name {()}
 sub get_checks_by_template {
     my ($self, $qv, $template, $path) = @_;
 
-    if ($template->{'type'} eq 'hash') {
-        $template->{'extra'} //= FALSE;
-    } elsif ($template->{'type'} eq 'array') {
-        throw Exception::Validator gettext('Options "all" and "contents" can not be used together')
-          if exists($template->{'all'}) && exists($template->{'contents'});
-    }
+    $self->pre_process_template($template);
 
     my @checks         = ();
     my %exists_options = ();
@@ -32,7 +27,7 @@ sub get_checks_by_template {
         if (exists($template->{$option})) {
             $exists_options{$option} = TRUE;
 
-            if ($option eq 'msg') {
+            if ($option eq 'message' || $option eq 'msg') {
                 $qv->{'__CUSTOM_ERRORS__'} = $template->{$option};
 
                 next;
@@ -52,6 +47,8 @@ sub get_checks_by_template {
 
     return @checks;
 }
+
+sub pre_process_template {}
 
 sub skip {
     my ($qv, $val, $template) = @_;
@@ -102,12 +99,14 @@ sub check {
         }
         catch {
             $error     = TRUE;
-            ldump(shift->message);
+
+            $qv->use_errors_handler(shift);
+
             $error_msg = gettext('Internal error');
         };
 
         if ($error) {
-            throw Exception::Validator::FailedField $error_msg, check_error => TRUE;
+            throw FF $error_msg, check_error => TRUE;
         }
 
         return TRUE;

@@ -486,12 +486,12 @@ cmp_deeply(
     \@e,
     [
         {
-            'path' => ['alt_height'],
-            'msgs' => [gettext('Got value "-1" less then "1"')]
+            'path'    => ['alt_height'],
+            'message' => gettext('Got value "-1" less then "1"')
         },
         {
-            'path' => ['alt_width'],
-            'msgs' => [gettext('Got value "0" less then "1"')]
+            'path'    => ['alt_width'],
+            'message' => gettext('Got value "0" less then "1"')
         }
     ],
     'Two errors'
@@ -520,12 +520,12 @@ cmp_deeply(
     \@e,
     [
         {
-            'path' => ['alt_height'],
-            'msgs' => [gettext('Got value "%s" less then "%s"', -1, 1)]
+            'path'    => ['alt_height'],
+            'message' => gettext('Got value "%s" less then "%s"', -1, 1)
         },
         {
-            'msgs' => [gettext('Field "%s" depends on "%s"', 'alt_width', 'alt_height')],
-            'path' => ['alt_width']
+            'message' => gettext('Field "%s" depends on "%s"', 'alt_width', 'alt_height'),
+            'path'    => ['alt_width']
         }
     ],
     'Error with depends'

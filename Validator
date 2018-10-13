@@ -1,0 +1,65 @@
+my $var = {
+   key  => 1,
+   key2 => 2,
+   key3 => [{id => 1, blocked => 1}, {id => 2, blocked => 0, cpm => 100}, {id => 3, blocked => 0, cpm => 130}],
+};
+
+my $qv = QBit::Validator->new($var);
+
+$qv->validate('$', is_hash, hash_keys([qw(key key2 key3)], only => TRUE))
+->validate('$.key', eq(1));
+->validate('$.key2', eq(2));
+->validate('$.key3', is_array());
+->validate('$.key3.*', sub {
+   $_[0]->validate('$', is_hash,
+		hash_keys([qw(id blocked)], optional => [qw(cpm)], only => TRUE)
+   )
+   ->validate('$.id', int())
+   ->validate('$.blocked', is_boolean())
+   ->condition('$.blocked', sub {$_[0] == 1}, $_[0]->has_no('cpm'), $_[0]->validate('$.cpm', min(1), max(150)));
+});
+                     
+
+QBit::Validator->new(
+	data => $var,
+	template => {
+	    type => 'hash',
+	    fields => {
+	       key => {eq => 1},
+	       key2 => {eq => 2},
+	       keys3 => {
+	           type => 'array',
+	           all => {
+	               type => 'hash',
+	               fields => {
+	                   id => {type => 'int_un'},
+	                   blocked => {type => 'boolean'},
+	                   cpm => {
+	                       min => 1,
+	                       max => 150,
+	                   }
+	               },
+	               deps => {
+	                   cpm => {
+	                       fields => [qw(blocked)],
+	                       cases => [[{blocked => {eq => 1}},]] #
+	                       ....
+	                   }
+	               }
+	           }
+	       }
+	    }
+	}
+);
+
+push(@validation, hash_keys('', [qw(key key2 key3)]));
+
+push(@validation, val_eq('key', 1));
+
+push(@validation, val_eq('key2', 2));
+
+push(@validation, val_in('key3', [3, 4, 5]));
+
+push(@validation, val_int('key3/*',));
+
+QBit::Validator->new($data, @validation);

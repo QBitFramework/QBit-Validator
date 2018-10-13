@@ -6,15 +6,16 @@ use base qw(QBit::Class);
 
 use Exception::Validator;
 
-#TODO: write test for errors structure
 #TODO: write type "variable"
 #TODO: Benchmark (one create vs more and more create vs more)
 
 __PACKAGE__->mk_ro_accessors(qw(app parent));
 
-__PACKAGE__->mk_accessors(qw(template dpath));    #data
+__PACKAGE__->mk_accessors(qw(template dpath));
 
-my %available_fields = map {$_ => TRUE} qw(data template app throw pre_run dpath parent);
+my %AVAILABLE_FIELDS = map {$_ => TRUE} qw(data template app throw pre_run dpath parent sys_errors_handler);
+
+our $SYS_ERRORS_HANDLER = sub { };
 
 sub init {
     my ($self) = @_;
@@ -26,7 +27,7 @@ sub init {
     throw Exception::Validator gettext('Option "parent" must be QBit::Validator')
       if defined($self->parent) && (!blessed($self->parent) || !$self->parent->isa('QBit::Validator'));
 
-    my @bad_fields = grep {!$available_fields{$_}} keys(%{$self});
+    my @bad_fields = grep {!$AVAILABLE_FIELDS{$_}} keys(%{$self});
     throw Exception::Validator gettext('Unknown options: %s', join(', ', @bad_fields))
       if @bad_fields;
 
@@ -39,11 +40,19 @@ sub init {
 
     $self->{'dpath'} //= '/';
 
+    local $SYS_ERRORS_HANDLER = $self->{'sys_errors_handler'} if exists($self->{'sys_errors_handler'});
+
     $self->_init_template();
 
     $self->validate($self->data) if exists($self->{'data'});
 
     $self->throw_exception() if $self->has_errors && $self->{'throw'};
+}
+
+sub use_errors_handler {
+    my ($self, $error) = @_;
+
+    $SYS_ERRORS_HANDLER->($error);
 }
 
 sub _init_template {
@@ -112,6 +121,9 @@ sub _get_type_and_template {
 sub validate {
     my ($self, $data) = @_;
 
+    delete($self->{'__FIELDS_WITH_ERRORS__'});
+    delete($self->{'__ERRORS_BY_DPATH__'});
+
     $self->data($data);
 
     return $self->_validate($data);
@@ -121,7 +133,6 @@ sub _validate {
     my ($self, $data) = @_;
 
     delete($self->{'__ERRORS__'});
-    delete($self->{'__FIELDS_WITH_ERRORS__'});
 
     my @checks = @{$self->{'__CHECKS__'}};
 
@@ -154,23 +165,16 @@ sub get_errors {$_[0]->{'__ERRORS__'}}
 sub _get_type_by_name {
     my ($self, $type_name) = @_;
 
-    unless (exists($self->{'__TYPES__'}{$type_name})) {
-        #TODO: use stash and require_class
+    my $package_stash = package_stash(ref($self));
+
+    unless (exists($package_stash->{'__TYPES__'}{$type_name})) {
         my $type_class = 'QBit::Validator::Type::' . $type_name;
-        my $type_fn    = "$type_class.pm";
-        $type_fn =~ s/::/\//g;
+        require_class($type_class);
 
-        try {
-            require $type_fn;
-        }
-        catch {
-            throw Exception::Validator gettext('Unknown type "%s": %s', $type_name, shift->message);
-        };
-
-        $self->{'__TYPES__'}{$type_name} = $type_class->new();
+        $package_stash->{'__TYPES__'}{$type_name} = $type_class->new();
     }
 
-    return $self->{'__TYPES__'}{$type_name};
+    return $package_stash->{'__TYPES__'}{$type_name};
 }
 
 sub throw_exception {
@@ -184,22 +188,13 @@ sub get_all_errors {
 
     my $error = '';
 
-    $error .= join("\n", map {@{$_->{'msgs'}}} $self->get_fields_with_error());
+    $error .= join("\n", map {$_->{'message'}} $self->get_fields_with_error());
 
     return $error;
 }
 
 sub get_error {
-    my ($self, $field) = @_;
-
-    my $key = $self->_get_key($field);
-
-    my $error = '';
-    foreach ($self->get_fields_with_error()) {
-        $error = join("\n", @{$_->{'msgs'}}) if $key eq $self->_get_key($_->{'path'});
-    }
-
-    return $error;
+    return $_[0]->get_errors_by_dpath->{$_[0]->_get_dpath($_[1])};
 }
 
 sub get_fields_with_error {
@@ -208,15 +203,21 @@ sub get_fields_with_error {
     unless (exists($self->{'__FIELDS_WITH_ERRORS__'})) {
         my $errors = $self->get_errors;
 
-        #TODO: cached hash {'/a/b' => 'error'}
         $self->{'__FIELDS_WITH_ERRORS__'} = defined($errors) ? [_get_nodes([], $errors)] : undef;
     }
 
     return @{$self->{'__FIELDS_WITH_ERRORS__'}};
 }
 
-sub get_errors_as_hash {
-    #TODO: use get_fields_with_error and save result
+sub get_errors_by_dpath {
+    my ($self) = @_;
+
+    unless (exists($self->{'__ERRORS_BY_DPATH__'})) {
+        $self->{'__ERRORS_BY_DPATH__'} =
+          {map {$self->_get_dpath($_->{'path'}) => $_->{'message'}} $self->get_fields_with_error()};
+    }
+
+    return $self->{'__ERRORS_BY_DPATH__'};
 }
 
 sub _get_nodes {
@@ -227,23 +228,13 @@ sub _get_nodes {
     }
 }
 
-sub has_error {
-    my ($self, $field) = @_;
-
-    my $key = $self->_get_key($field);
-
-    foreach ($self->get_fields_with_error()) {
-        return TRUE if $key eq $self->_get_key($_->{'path'});
-    }
-
-    return FALSE;
-}
+sub has_error {defined($_[0]->get_error($_[1]))}
 
 sub has_errors {
     return defined($_[0]->{'__ERRORS__'});
 }
 
-sub _get_key {
+sub _get_dpath {
     my ($self, $path_field) = @_;
 
     $path_field //= [];
@@ -309,6 +300,24 @@ B<app> - model using in check
 
 B<throw> - throw (boolean type, throw exception if an error has occurred)
 
+=item
+
+B<dpath> - data path for validator (see: Data::DPath)
+
+=item
+
+B<parent> - ref to a parent validator
+
+=item
+
+B<sys_errors_handler> - handler for system errors in sub "check" (default empty function: sub {})
+
+  # global set handler
+  $QBit::Validator::SYS_ERRORS_HANDLER = sub {log($_[0])}; # first argument is error
+
+  #or local set handler
+  my $qv = QBit::Validator->new(template => {}, sys_errors_handler => sub {log($_[0])});
+
 =back
 
 B<Example:>
@@ -331,13 +340,41 @@ B<Example:>
 
 =head2 template
 
-get or set template
+get or set template (Use only into pre_run)
 
 B<Example:>
 
   my $template = $qv->template;
 
   $qv->template($template);
+
+=head2 data
+
+set or get data
+
+B<Example:>
+
+  $self->db->table->edit($qv->data) unless $qv->has_errors;
+
+=head2 validate
+
+set data and validate it
+
+B<Example:>
+
+  my $qv = QBit::Validator->new(
+    template => {
+        type => 'scalar',
+        min  => 50,
+        max  => 60,
+    }
+  );
+
+  foreach (45 .. 65) {
+      $qv->validate($_);
+
+      print $qv->get_error() if $qv->has_errors;
+  }
 
 =head2 has_errors
 
@@ -349,13 +386,29 @@ B<Example:>
       ...
   }
 
-=head2 data
+=head2 has_error
 
-return data
+return boolean result (TRUE if an error has occurred in field or FALSE)
 
 B<Example:>
 
-  $self->db->table->edit($qv->data) unless $qv->has_errors;
+  $qv->get_error('field') if $qv->has_error('field');
+  $qv->get_error(['field']) if $qv->has_error(['field']);
+  $qv->get_error('/field]) if $qv->has_error('/field');
+
+=head2 get_error
+
+return error by path (dpath or array)
+
+B<Example:>
+
+  if ($qv->has_errors) {
+      my $error = $qv->get_error('hello');
+      # or ['hello']
+      #or dapth '/hello'
+
+      print $error; # 'Error'
+  }
 
 =head2 get_fields_with_error
 
@@ -370,25 +423,26 @@ B<Example:>
 
       # [
       #     {
-      #         msgs => ['Error'],
-      #         path => ['hello']
+      #         messsage => 'Error',
+      #         path     => ['hello']
       #     }
       # ]
       #
-      # path => [''] - error in root
+      # path => [] - error in root
   }
 
-=head2 get_error
+=head2 get_erros_by_dpat
 
-return error by path
+return ref to a hash
 
 B<Example:>
 
-  if ($qv->has_errors) {
-      my $error = $qv->get_error('hello'); # or ['hello']
+  my $errors = $qv->get_erros_by_dpat();
 
-      print $error; # 'Error'
-  }
+  #{
+  #    '/hello' => 'Error',
+  #    '/'      => 'Error in root'
+  #}
 
 =head2 get_all_errors
 

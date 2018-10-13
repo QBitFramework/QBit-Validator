@@ -12,6 +12,13 @@ sub get_options_name {
     qw(type size_min size size_max all contents);
 }
 
+sub pre_process_template {
+    my ($self, $template) = @_;
+
+    throw Exception::Validator gettext('Options "all" and "contents" can not be used together')
+      if exists($template->{'all'}) && exists($template->{'contents'});
+}
+
 sub type {
     return sub {
         throw gettext('Data must be ARRAY') unless ref($_[1]) eq 'ARRAY';
@@ -95,7 +102,7 @@ sub contents {
     my $dpath = $qv->dpath;
 
     my @validators = ();
-    my $i = 0;
+    my $i          = 0;
     foreach my $template (@$templates) {
         my $validator = QBit::Validator->new(template => $template, parent => $qv, dpath => $dpath . "$i/");
 

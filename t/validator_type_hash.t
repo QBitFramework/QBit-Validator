@@ -1,4 +1,4 @@
-use Test::More tests => 38;
+use Test::More tests => 40;
 use Test::Deep;
 
 use qbit;
@@ -458,6 +458,40 @@ ok(
         },
       )->has_errors,
     'Option "any_of" check any keys'
+  );
+
+#deps with cases
+
+ok(
+    !QBit::Validator->new(
+        data     => {key => 1, key2 => 2, key3 => 3},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {},
+                key2 => {},
+                key3 => {eq => 3},
+            },
+            deps => {key3 => [qw(key key2)],}
+        },
+      )->has_errors,
+    'Option "deps", all keys exists (no error)'
+  );
+
+ok(
+    QBit::Validator->new(
+        data     => {key => 1, key2 => 2, key3 => 3},
+        template => {
+            type   => 'hash',
+            fields => {
+                key  => {},
+                key2 => {eq => 1},
+                key3 => {eq => 3},
+            },
+            deps => {key3 => [qw(key2)],}
+        },
+      )->has_errors,
+    'Option "deps", key2 not equals 1 (error)'
   );
 
 #

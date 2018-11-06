@@ -9,39 +9,191 @@ use Exception::Validator::FailedField;
 # VARIABLE #
 ############
 
-#deps with cases
+#ldump(
+#    QBit::Validator->new(
+#        data     => 10,
+#        template => {
+#            type   => 'variable',
+#            conditions => [
+#                {max => 5},
+#                {len_max => 1},
+#            ]
+#        },
+#    )
+#);
+#exit;
 
-ok(
-    !QBit::Validator->new(
-        data     => {key => 1, key2 => 2, key3 => 3},
-        template => {
-            type   => 'hash',
-            fields => {
-                key  => {},
-                key2 => {},
-                key3 => {eq => 3},
-            },
-            deps => {key3 => [qw(key key2)],}
-        },
-      )->has_errors,
-    'Option "deps", all keys exists (no error)'
-  );
+#ldump(
+#    QBit::Validator->new(
+#        data     => 4,
+#        template => {
+#            type   => 'variable',
+#            conditions => [
+#                {if => {max => 5}},
+#                {if => {len_max => 1}},
+#            ]
+#        },
+#    )
+#);
+#exit;
 
-ok(
+#ldump(
+#    QBit::Validator->new(
+#        data     => {
+#            key => 1,
+#            key2 => 2,
+#        },
+#        template => {
+#            type => 'hash',
+#            fields => {
+#                key => {in => [1, 2]},
+#                key2 => {
+#                    type   => 'variable',
+#                    conditions => [
+#                        {
+#                            if => ['/key' => {eq => 1}],
+#                            then => {eq => 2},
+#                            else => {eq => 3}
+#                        },
+#                    ]
+#                }
+#            },
+#            deps => {
+#                key2 => 'key'
+#            }
+#        },
+#    )
+#);
+#exit;
+
+#ldump(
+#    QBit::Validator->new(
+#        data     => {
+#            key => 1,
+#            key2 => [
+#                {
+#                    key => 2,
+#                    key2 => 3,
+#                },
+#                {
+#                    key => 1,
+#                    key2 => 2,
+#                }
+#            ],
+#        },
+#        template => {
+#            type => 'hash',
+#            fields => {
+#                key => {in => [1, 2]},
+#                key2 => {
+#                    type => 'array',
+#                    all => {
+#                        type => 'hash',
+#                        fields => {
+#                            key => {},
+#                            key2 => {
+#                                type   => 'variable',
+#                                conditions => [
+#                                    {
+#                                        if => ['../key' => {eq => 1}],
+#                                        then => {eq => 2},
+#                                        else => {eq => 3},
+#                                    },
+#                                ]
+#                            }
+#                        },
+#                        deps => {
+#                            key2 => 'key'
+#                        }
+#                    }
+#                },
+#            },
+#        },
+#    )
+#);
+#exit;
+
+ldump(
     QBit::Validator->new(
-        data     => {key => 1, key2 => 2, key3 => 3},
+        data => {
+            key  => 1,
+            key2 => [
+                {
+                    key3 => 2,
+                    key4 => {
+                        key5 => 1,
+                        key6 => [
+                            {
+                                key7 => 7,
+                                key8 => 8,
+                            },
+                            {
+                                key7 => 7,
+                                key8 => 8,
+                            },
+                        ]
+                    },
+                },
+                {
+                    key3 => 2,
+                    key4 => {
+                        key5 => 1,
+                        key6 => [
+                            {
+                                key7 => 7,
+                                key8 => 8,
+                            },
+                        ]
+                    },
+                }
+            ],
+        },
         template => {
             type   => 'hash',
             fields => {
                 key  => {},
-                key2 => {},
-                key3 => {eq => 3},
+                key2 => {
+                    type => 'array',
+                    all  => {
+                        type   => 'hash',
+                        fields => {
+                            key3 => {},
+                            key4 => {
+                                type   => 'hash',
+                                fields => {
+                                    key5 => {},
+                                    key6 => {
+                                        type => 'array',
+                                        all  => {
+                                            type   => 'hash',
+                                            fields => {
+                                                key7 => {in => [7, 8]},
+                                                key8 => {
+                                                    type       => 'variable',
+                                                    conditions => [
+                                                        {
+                                                            if   => ['../key7' => {eq => 7}],
+                                                            then => {eq        => 8},
+                                                            else => {eq        => 9},
+                                                        },
+                                                    ]
+                                                },
+                                            },
+                                            deps => {
+                                                key8 => 'key7'
+                                            }
+                                        }
+                                    }
+                                },
+                            }
+                        },
+                    }
+                },
             },
-            deps => {key3 => [qw(key4)],}
         },
-      )->has_errors,
-    'Option "deps", key does not exists (error)'
-  );
+    )
+);
+exit;
 
 ok(
     !QBit::Validator->new(
@@ -191,7 +343,7 @@ ok(
                         } elsif ($data->{'key'} == 2) {
                             return {eq => undef};
                         }
-                      }
+                    }
                 },
             }
         },
@@ -220,7 +372,7 @@ ok(
                         } elsif ($data->{'key'} == 2) {
                             return {eq => undef};
                         }
-                      }
+                    }
                 },
             }
         },
@@ -249,7 +401,7 @@ ok(
                         } elsif ($data->{'key'} == 2) {
                             return {eq => undef};
                         }
-                      }
+                    }
                 },
             }
         },
@@ -278,7 +430,7 @@ ok(
                         } elsif ($data->{'key'} == 2) {
                             return {eq => undef};
                         }
-                      }
+                    }
                 },
             }
         },
@@ -307,7 +459,7 @@ ok(
                         } elsif ($data->{'key'} == 2) {
                             return {eq => undef};
                         }
-                      }
+                    }
                 },
             }
         },
@@ -336,7 +488,7 @@ ok(
                         } elsif ($data->{'key'} == 2) {
                             return {eq => undef};
                         }
-                      }
+                    }
                 },
             }
         },

@@ -2,6 +2,8 @@ package Exception::Validator::FailedField;
 
 use base qw(Exception::Validator);
 
+use Scalar::Util qw(blessed);
+
 sub import {
     FF->export_to_level(1);
 }
@@ -13,7 +15,7 @@ sub new {
 
     $text = '' if !defined $text;
 
-    my $self   = {
+    my $self = {
         %data,
         (
             blessed($text) && $text->isa('Exception')
@@ -23,6 +25,12 @@ sub new {
     };
 
     return bless $self, $class;
+}
+
+sub as_string {
+    my ($self) = @_;
+
+    return ref($self) . ": $self->{'text'}\n" . ($self->{'parent'} ? "\n$self->{'parent'}\n" : '');
 }
 
 package FF;

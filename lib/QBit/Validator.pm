@@ -7,11 +7,10 @@ use base qw(QBit::Class);
 use Exception::Validator;
 
 #TODO: write type "variable"
-#TODO: Benchmark (one create vs more and more create vs more)
 
-__PACKAGE__->mk_ro_accessors(qw(app parent));
+__PACKAGE__->mk_ro_accessors(qw(app parent dpath));
 
-__PACKAGE__->mk_accessors(qw(template dpath));
+__PACKAGE__->mk_accessors(qw(template));
 
 my %AVAILABLE_FIELDS = map {$_ => TRUE} qw(data template app throw pre_run dpath parent sys_errors_handler);
 
@@ -77,11 +76,9 @@ sub data {
         $self->{'data'} = $params[0];
     }
 
-    if (defined($self->parent)) {
-        return $self->parent->data;
-    }
+    my $parent = $self->parent // $self;
 
-    $self->{'data'};
+    return $parent->{'data'};
 }
 
 sub _get_type_and_template {
@@ -244,6 +241,15 @@ sub _get_dpath {
     $path_field = '/' . $path_field unless $path_field =~ /^\//;
 
     return $path_field;
+}
+
+sub get_current_node_dpath {
+    my ($self) = @_;
+
+    my $parent = $self->parent // $self;
+    my @indexes = map {$$_} @{$parent->{'__CURRENT_INDEXES__'}};
+
+    return sprintf($self->dpath, @indexes);
 }
 
 TRUE;

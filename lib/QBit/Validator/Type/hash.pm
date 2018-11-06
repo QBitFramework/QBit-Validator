@@ -84,8 +84,10 @@ sub fields {
 
     my %validators = ();
     foreach my $field (keys(%$fields)) {
+        my $escape_field = _escape_field($field);
+
         $validators{$field} =
-          QBit::Validator->new(template => $fields->{$field}, parent => $qv, dpath => $qv->dpath . "$field/");
+          QBit::Validator->new(template => $fields->{$field}, parent => $qv->parent ? $qv->parent : $qv, dpath => $qv->dpath . "$sprintf_escape/");
     }
 
     my $inverse_depends = $qv->{'__INVERSE_DEPENDS__'} // {};
@@ -109,6 +111,19 @@ sub fields {
 
         return TRUE;
       }
+}
+
+sub _escape_field {
+    my ($field) = @_;
+
+    #sprintf
+    $field =~ s/%/%%/g;
+
+    #dpath
+    $field =~ s#\\"#\\\\"#g;
+    $field =~ s#"#\\"#g;
+
+    return "\"$field\"";
 }
 
 sub _set_recursive_depends_errors {

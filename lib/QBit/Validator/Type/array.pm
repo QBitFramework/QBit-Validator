@@ -69,23 +69,23 @@ sub size_max {
 sub all {
     my ($qv, $template) = @_;
 
-    my $dpath = $qv->dpath;
+    my $parent = $qv->parent // $qv;
 
-    my $validator = QBit::Validator->new(template => $template, parent => $qv);
+    my $validator = QBit::Validator->new(template => $template, parent => $parent, dpath => $qv->dpath . '[%d]/');
 
     return sub {
         my %errors = ();
         my $num    = 0;
-        foreach (@{$_[1]}) {
-            #TODO: fix it
-            $validator->dpath($dpath . "$num/");
 
+        push(@{$parent->{'__CURRENT_INDEXES__'}}, \$num);
+        foreach (@{$_[1]}) {
             unless ($validator->_validate($_)) {
                 $errors{$num} = $validator->get_errors;
             }
 
             $num++;
         }
+        pop(@{$parent->{'__CURRENT_INDEXES__'}});
 
         throw FF \%errors if %errors;
 
@@ -104,7 +104,7 @@ sub contents {
     my @validators = ();
     my $i          = 0;
     foreach my $template (@$templates) {
-        my $validator = QBit::Validator->new(template => $template, parent => $qv, dpath => $dpath . "$i/");
+        my $validator = QBit::Validator->new(template => $template, parent => $qv->parent ? $qv->parent : $qv, dpath => $dpath . "[$i]/");
 
         push(@validators, $validator);
 

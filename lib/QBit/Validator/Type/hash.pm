@@ -86,8 +86,11 @@ sub fields {
     foreach my $field (keys(%$fields)) {
         my $escape_field = _escape_field($field);
 
-        $validators{$field} =
-          QBit::Validator->new(template => $fields->{$field}, parent => $qv->parent ? $qv->parent : $qv, dpath => $qv->dpath . "$sprintf_escape/");
+        $validators{$field} = QBit::Validator->new(
+            template => $fields->{$field},
+            parent   => $qv->parent ? $qv->parent : $qv,
+            dpath    => $qv->dpath . "$escape_field/"
+        );
     }
 
     my $inverse_depends = $qv->{'__INVERSE_DEPENDS__'} // {};
@@ -120,8 +123,8 @@ sub _escape_field {
     $field =~ s/%/%%/g;
 
     #dpath
-    $field =~ s#\\"#\\\\"#g;
-    $field =~ s#"#\\"#g;
+    $field =~ s!\\"!\\\\"!g;
+    $field =~ s!"!\\"!g;
 
     return "\"$field\"";
 }

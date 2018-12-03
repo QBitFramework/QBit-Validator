@@ -7,13 +7,16 @@ use base qw(QBit::Class);
 use Exception::Validator;
 
 #TODO: write type "variable"
+#TODO: storage for errors
+#TODO: path for errors
 
-__PACKAGE__->mk_ro_accessors(qw(app parent dpath));
+__PACKAGE__->mk_ro_accessors(qw(app parent path));
 
 __PACKAGE__->mk_accessors(qw(template));
 
-my %AVAILABLE_FIELDS = map {$_ => TRUE} qw(data template app throw pre_run dpath parent sys_errors_handler);
+my %AVAILABLE_FIELDS = map {$_ => TRUE} qw(data template app throw pre_run path path_manager parent sys_errors_handler);
 
+our $PATH_MANAGER_CLASS = 'QBit::Validator::PathManager';
 our $SYS_ERRORS_HANDLER = sub { };
 
 sub init {
@@ -36,8 +39,6 @@ sub init {
 
         $self->{'pre_run'}($self);
     }
-
-    $self->{'dpath'} //= '/';
 
     local $SYS_ERRORS_HANDLER = $self->{'sys_errors_handler'} if exists($self->{'sys_errors_handler'});
 
@@ -243,13 +244,16 @@ sub _get_dpath {
     return $path_field;
 }
 
-sub get_current_node_dpath {
+sub path_manager {
     my ($self) = @_;
 
-    my $parent = $self->parent // $self;
-    my @indexes = map {$$_} @{$parent->{'__CURRENT_INDEXES__'}};
+    unless ($self->{'path_manager'}) {
+        require_class($PATH_MANAGER_CLASS);
 
-    return sprintf($self->dpath, @indexes);
+        $self->{'path_manager'} = $PATH_MANAGER_CLASS->new();
+    }
+
+    return $self->{'path_manager'};
 }
 
 TRUE;

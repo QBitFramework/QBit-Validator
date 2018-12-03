@@ -69,15 +69,20 @@ sub size_max {
 sub all {
     my ($qv, $template) = @_;
 
-    my $parent = $qv->parent // $qv;
+    my $parent       = $qv->parent // $qv;
+    my $path_manager = $parent->path_manager();
 
-    my $validator = QBit::Validator->new(template => $template, parent => $parent, dpath => $qv->dpath . '[%d]/');
+    my $validator = QBit::Validator->new(
+        template => $template,
+        parent   => $parent,
+        path     => $path_manager->get_absolute_path($path_manager->get_path_part('array', '%d'), $qv->path),
+    );
 
     return sub {
         my %errors = ();
-        my $num    = 0;
 
-        push(@{$parent->{'__CURRENT_INDEXES__'}}, \$num);
+        my $num = 0;
+        $path_manager->set_dynamic_part(\$num);
         foreach (@{$_[1]}) {
             unless ($validator->_validate($_)) {
                 $errors{$num} = $validator->get_errors;
@@ -85,7 +90,7 @@ sub all {
 
             $num++;
         }
-        pop(@{$parent->{'__CURRENT_INDEXES__'}});
+        $path_manager->reset_dynamic_part();
 
         throw FF \%errors if %errors;
 
@@ -99,12 +104,19 @@ sub contents {
     throw Exception::Validator gettext('Option "%s" must be ARRAY', 'contents')
       if !defined($templates) || ref($templates) ne 'ARRAY';
 
-    my $dpath = $qv->dpath;
+    my $parent       = $qv->parent // $qv;
+    my $path_manager = $parent->path_manager;
+
+    my $path = $qv->path;
 
     my @validators = ();
     my $i          = 0;
     foreach my $template (@$templates) {
-        my $validator = QBit::Validator->new(template => $template, parent => $qv->parent ? $qv->parent : $qv, dpath => $dpath . "[$i]/");
+        my $validator = QBit::Validator->new(
+            template => $template,
+            parent   => $parent,
+            path     => $path_manager->get_absolute_path($path_manager->get_path_part('array', $i), $path),
+        );
 
         push(@validators, $validator);
 

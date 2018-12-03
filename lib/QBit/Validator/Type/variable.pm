@@ -4,7 +4,7 @@ use qbit;
 
 use base qw(QBit::Validator::Type);
 
-use Data::DPath qw(dpath);
+#use Data::DPath qw(dpath);
 
 use QBit::Validator;
 
@@ -53,16 +53,16 @@ sub _get_check_by_condition {
         if ($condition->{'then'}) {
             $then = QBit::Validator->new(
                 template => $condition->{'then'},
-                parent   => $qv->parent ? $qv->parent : $qv,
-                dpath    => $qv->dpath
+                parent   => $qv->parent // $qv,
+                path     => $qv->path
             );
         }
 
         if ($condition->{'else'}) {
             $else = QBit::Validator->new(
                 template => $condition->{'else'},
-                parent   => $qv->parent ? $qv->parent : $qv,
-                dpath    => $qv->dpath
+                parent   => $qv->parent // $qv,
+                path     => $qv->path
             );
         }
 
@@ -125,29 +125,27 @@ sub _get_check {
 
     my $ref = ref($condition);
 
+    my $parent = $qv->parent // $qv;
+
     my $validator = QBit::Validator->new(
         template => $ref eq 'ARRAY' ? $condition->[1] : $condition,
-        parent   => $qv->parent ? $qv->parent : $qv,
-        dpath    => $qv->dpath,
+        parent   => $parent,
+        path     => $qv->path,
     );
 
     if ($ref eq 'ARRAY' && $condition->[0] ne '') {
         #check field
 
-        my $data = $qv->data;
+        my $data         = $qv->data;
+        my $path_manager = $parent->path_manager();
 
         return sub {
-            my $condition_dpath = $condition->[0];
+            my $condition_path = $path_manager->get_absolute_path($condition->[0], $qv->path);
 
-            unless ($condition_dpath =~ /^\//) {
-                $condition_dpath = $qv->get_current_node_dpath() . $condition_dpath;
-            }
+            my $data_to_check =
+              $path_manager->get_data_by_path($path_manager->get_current_node_path($condition_path), $data);
 
-            my @data_to_check = dpath($condition_dpath)->match($data);
-
-            throw QBit::Validator gettext('Incorrect path "%s"', $condition_dpath) if @data_to_check > 1;
-
-            $validator->_validate(@data_to_check);
+            $validator->_validate($data_to_check);
 
             return $validator;
           }

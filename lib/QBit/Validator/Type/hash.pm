@@ -77,19 +77,22 @@ sub _get_field_order {
 }
 
 #TODO: implement method _exists
-# defined is required
+# defined = required
 
 sub fields {
     my ($qv, $fields, $template) = @_;
 
+    my $parent = $qv->parent // $qv;
+    my $path_manager = $parent->path_manager();
+
+    my $path = $qv->path();
+
     my %validators = ();
     foreach my $field (keys(%$fields)) {
-        my $escape_field = _escape_field($field);
-
         $validators{$field} = QBit::Validator->new(
             template => $fields->{$field},
-            parent   => $qv->parent ? $qv->parent : $qv,
-            dpath    => $qv->dpath . "$escape_field/"
+            parent   => $parent,
+            path     => $path_manager->get_absolute_path($path_manager->get_path_part('hash', $field), $path),
         );
     }
 
@@ -114,19 +117,6 @@ sub fields {
 
         return TRUE;
       }
-}
-
-sub _escape_field {
-    my ($field) = @_;
-
-    #sprintf
-    $field =~ s/%/%%/g;
-
-    #dpath
-    $field =~ s!\\"!\\\\"!g;
-    $field =~ s!"!\\"!g;
-
-    return "\"$field\"";
 }
 
 sub _set_recursive_depends_errors {

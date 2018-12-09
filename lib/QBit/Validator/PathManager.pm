@@ -144,7 +144,11 @@ B<Example:>
 
 =head2 get_data_by_path
 
-returns data by path.
+returns data by path. No difference between hash key and array index in path. Hash key must satisfy regex
+
+  /^[0-9a-zA-Z_]+\z/.
+
+Path consists of:
 
 =over
 
@@ -176,9 +180,12 @@ B<Example:>
       ],
   };
 
-  $path_manager->get_data_by_path('/key', $data);    # 1
-  $path_manager->get_data_by_path('/key2', $data);   # [2, 3]
-  $path_manager->get_data_by_path('/key2/0', $data); # 2
+  $path_manager->get_data_by_path('/', $data);            # $data
+  $path_manager->get_data_by_path('/key', $data);         # 1
+  $path_manager->get_data_by_path('/key/.', $data);       # 1
+  $path_manager->get_data_by_path('/key2', $data);        # [2, 3]
+  $path_manager->get_data_by_path('/key2/0', $data);      # 2
+  $path_manager->get_data_by_path('/key2/../key', $data); # 1
 
 =head1 Your path manager
 
@@ -197,6 +204,6 @@ B<Example:>
 
   sub array_path {'[$_[1]]'}
 
-  sub get_data_by_path {my @result = dpath($_[1])->match($_[2]); return $result[0]}
+  sub get_data_by_path {my @result = dpath($_[1])->match($_[2]); return $result[0];}
 
   1;

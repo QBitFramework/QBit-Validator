@@ -194,7 +194,7 @@ ok(
         template => {
             check => sub {
                 throw FF gettext('Data must be equal "qbit"') if $_[1] ne 'qbit';
-              }
+            }
         },
       )->has_errors,
     'Option "check" (no error)'
@@ -206,7 +206,7 @@ ok(
         template => {
             check => sub {
                 throw FF gettext('Data must be no equal 5') if $_[1] == 5;
-              }
+            }
         },
       )->has_errors,
     'Option "check" (error)'
@@ -236,7 +236,7 @@ is(
     'Get all errors'
   );
 
-is(QBit::Validator->new(data => 5, template => {in => 7, max => 2, msg => 'my error msg'},)->get_error(),
+is(QBit::Validator->new(data => 5, template => {in => 7, max => 2, msg => 'my error msg'},)->get_error('/'),
     'my error msg', 'Get my error');
 
 #
@@ -271,9 +271,9 @@ is(
         template => {
             check => sub {
                 throw FF gettext('Data must be equal 5') if $_[1] != 5;
-              }
+            }
         },
-      )->get_error,
+      )->get_error('/'),
     gettext('Internal error'),
     'Check right error'
   );

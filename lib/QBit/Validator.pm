@@ -6,17 +6,13 @@ use base qw(QBit::Class);
 
 use Exception::Validator;
 
-#TODO: write type "variable"
-#TODO: storage for errors
-#TODO: path for errors
-
 __PACKAGE__->mk_ro_accessors(qw(app parent path));
 
 __PACKAGE__->mk_accessors(qw(template));
 
 my %AVAILABLE_FIELDS = map {$_ => TRUE} qw(data template app throw pre_run path path_manager parent sys_errors_handler);
 
-our $PATH_MANAGER_CLASS = 'QBit::Validator::PathManager';
+our $PATH_MANAGER = 'QBit::Validator::PathManager';
 our $SYS_ERRORS_HANDLER = sub { };
 
 sub init {
@@ -119,9 +115,6 @@ sub _get_type_and_template {
 sub validate {
     my ($self, $data) = @_;
 
-    delete($self->{'__FIELDS_WITH_ERRORS__'});
-    delete($self->{'__ERRORS_BY_DPATH__'});
-
     $self->data($data);
 
     return $self->_validate($data);
@@ -192,65 +185,72 @@ sub get_all_errors {
 }
 
 sub get_error {
-    return $_[0]->get_errors_by_dpath->{$_[0]->_get_dpath($_[1])};
+    my $error = $_[0]->path_manager->get_data_by_path($_[1] // $_[0]->path_manager->root, $_[0]->get_errors);
+
+    return ref($error) eq '' ? $error : undef;
 }
 
 sub get_fields_with_error {
     my ($self) = @_;
 
-    unless (exists($self->{'__FIELDS_WITH_ERRORS__'})) {
-        my $errors = $self->get_errors;
+    my $errors = $self->get_errors;
 
-        $self->{'__FIELDS_WITH_ERRORS__'} = defined($errors) ? [_get_nodes([], $errors)] : undef;
+    if (defined($errors)) {
+        my $path_manager = $self->path_manager;
+
+        return _get_nodes($path_manager, $path_manager->root, $errors);
+    } else {
+        return ();
     }
-
-    return @{$self->{'__FIELDS_WITH_ERRORS__'}};
-}
-
-sub get_errors_by_dpath {
-    my ($self) = @_;
-
-    unless (exists($self->{'__ERRORS_BY_DPATH__'})) {
-        $self->{'__ERRORS_BY_DPATH__'} =
-          {map {$self->_get_dpath($_->{'path'}) => $_->{'message'}} $self->get_fields_with_error()};
-    }
-
-    return $self->{'__ERRORS_BY_DPATH__'};
 }
 
 sub _get_nodes {
-    if (ref($_[1]) eq 'HASH') {
-        return map {_get_nodes([@{$_[0]}, $_], $_[1]->{$_})} sort keys(%{$_[1]});
+    my ($path_manager, $root_path, $data) = @_;
+
+    if (ref($data) eq 'HASH') {
+        return map {
+            _get_nodes($path_manager,
+                $path_manager->concatenate($root_path, $path_manager->delimiter, $path_manager->hash_path($_)),
+                $data->{$_})
+          }
+          sort keys(%$data);
+    } elsif (ref($data) eq 'ARRAY') {
+        my $i      = 0;
+        my @result = ();
+        while ($i < @$data) {
+            if (defined($data->[$i])) {
+                push(
+                    @result,
+                    _get_nodes(
+                        $path_manager,
+                        $path_manager->concatenate($root_path, $path_manager->delimiter, $path_manager->array_path($i)),
+                        $data->[$i]
+                    )
+                );
+            }
+
+            $i++;
+        }
+
+        return @result;
     } else {
-        return {path => $_[0], message => $_[1]};
+        return {path => $root_path, message => $data};
     }
 }
 
 sub has_error {defined($_[0]->get_error($_[1]))}
 
 sub has_errors {
-    return defined($_[0]->{'__ERRORS__'});
-}
-
-sub _get_dpath {
-    my ($self, $path_field) = @_;
-
-    $path_field //= [];
-    $path_field = [$path_field] unless ref($path_field) eq 'ARRAY';
-
-    $path_field = join('/', @$path_field);
-    $path_field = '/' . $path_field unless $path_field =~ /^\//;
-
-    return $path_field;
+    return defined($_[0]->get_errors);
 }
 
 sub path_manager {
     my ($self) = @_;
 
     unless ($self->{'path_manager'}) {
-        require_class($PATH_MANAGER_CLASS);
+        require_class($PATH_MANAGER);
 
-        $self->{'path_manager'} = $PATH_MANAGER_CLASS->new();
+        $self->{'path_manager'} = $PATH_MANAGER->new();
     }
 
     return $self->{'path_manager'};
@@ -300,7 +300,7 @@ B<template> - template for check
 
 =item
 
-B<pre_run> - function is executed before checking
+B<pre_run> - function is executed before checking (deprecated)
 
 =item
 
@@ -312,14 +312,6 @@ B<throw> - throw (boolean type, throw exception if an error has occurred)
 
 =item
 
-B<dpath> - data path for validator (see: Data::DPath)
-
-=item
-
-B<parent> - ref to a parent validator
-
-=item
-
 B<sys_errors_handler> - handler for system errors in sub "check" (default empty function: sub {})
 
   # global set handler
@@ -327,6 +319,24 @@ B<sys_errors_handler> - handler for system errors in sub "check" (default empty 
 
   #or local set handler
   my $qv = QBit::Validator->new(template => {}, sys_errors_handler => sub {log($_[0])});
+
+=item
+
+B<path_manager> - path manager (default QBit::Validator::PathManager)
+
+  # global set path_manager
+  $QBit::Validator::PATH_MANAGER = 'MyPathManager::For::Data::DPath';
+
+  #or local set path_manager
+  my $qv = QBit::Validator->new(template => {}, path_manager => MyPathManager::For::Data::DPath->new()});
+
+=item
+
+B<path> - data path for validator (see: QBit::Validator::PathManager)
+
+=item
+
+B<parent> - ref to a parent validator
 
 =back
 
@@ -403,19 +413,17 @@ return boolean result (TRUE if an error has occurred in field or FALSE)
 B<Example:>
 
   $qv->get_error('field') if $qv->has_error('field');
-  $qv->get_error(['field']) if $qv->has_error(['field']);
-  $qv->get_error('/field]) if $qv->has_error('/field');
+  $qv->get_error('/field') if $qv->has_error('/field');
 
 =head2 get_error
 
-return error by path (dpath or array)
+return error by path (string or array)
 
 B<Example:>
 
   if ($qv->has_errors) {
       my $error = $qv->get_error('hello');
-      # or ['hello']
-      #or dapth '/hello'
+      #or '/hello'
 
       print $error; # 'Error'
   }
@@ -434,25 +442,12 @@ B<Example:>
       # [
       #     {
       #         messsage => 'Error',
-      #         path     => ['hello']
+      #         path     => '/hello/'
       #     }
       # ]
       #
-      # path => [] - error in root
+      # path => '/' - error in root
   }
-
-=head2 get_erros_by_dpat
-
-return ref to a hash
-
-B<Example:>
-
-  my $errors = $qv->get_erros_by_dpat();
-
-  #{
-  #    '/hello' => 'Error',
-  #    '/'      => 'Error in root'
-  #}
 
 =head2 get_all_errors
 
@@ -579,6 +574,18 @@ one_of
 =item
 
 any_of
+
+=back
+
+For more information see tests
+
+=head2 variable
+
+=over
+
+=item
+
+conditions
 
 =back
 

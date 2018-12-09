@@ -1,4 +1,4 @@
-use Test::More tests => 20;
+use Test::More tests => 11;
 use Test::Deep;
 
 use qbit;
@@ -134,7 +134,7 @@ cmp_deeply(
             'height' => 'Enter your height',
             'age'    => 'Got value "14" less then "18"'
         },
-        'pets'  => {'1' => {'breed' => 'Length "no" less then "3"'}},
+        'pets'  => [undef, {'breed' => 'Length "no" less then "3"'}],
         'login' => 'Login can contain any letters a to z and any numbers from 0 through 9'
     },
     'get_errors'
@@ -148,69 +148,46 @@ cmp_deeply(
     [$validator->get_fields_with_error],
     [
         {
-            'path'    => ['contacts'],
-            'message' => gettext('Extra fields: %s', 'facebook'),
+            'path'    => '/contacts/',
+            'message' => 'Extra fields: facebook'
         },
         {
-            'path'    => ['login'],
-            'message' => gettext('Login can contain any letters a to z and any numbers from 0 through 9'),
+            'message' => 'Login can contain any letters a to z and any numbers from 0 through 9',
+            'path'    => '/login/'
         },
         {
-            'path'    => ['password2'],
-            'message' => gettext('password and password2 must be equals'),
+            'message' => 'password and password2 must be equals',
+            'path'    => '/password2/'
         },
         {
-            'path'    => ['person', 'age'],
-            'message' => gettext('Got value "%s" less then "%s"', 14, 18),
+            'message' => 'Got value "14" less then "18"',
+            'path'    => '/person/age/'
         },
         {
-            'path'    => ['person', 'height'],
-            'message' => gettext('Enter your height'),
+            'path'    => '/person/height/',
+            'message' => 'Enter your height'
         },
         {
-            'path'    => ['person', 'weight'],
-            'message' => gettext('Data must be defined'),
+            'path'    => '/person/weight/',
+            'message' => 'Data must be defined'
         },
         {
-            'path'    => ['pets', '1', 'breed'],
-            'message' => gettext('Length "%s" less then "%s"', 'no', 3),
+            'path'    => '/pets/1/breed/',
+            'message' => 'Length "no" less then "3"'
         }
     ],
     'get_fields_with_error'
 );
 
 #
-# get_errors_by_dpath
-#
-
-cmp_deeply(
-    $validator->get_errors_by_dpath,
-    {
-        '/pets/1/breed'  => gettext('Length "%s" less then "%s"', 'no', 3),
-        '/person/height' => gettext('Enter your height'),
-        '/password2'     => gettext('password and password2 must be equals'),
-        '/login'         => gettext('Login can contain any letters a to z and any numbers from 0 through 9'),
-        '/contacts'      => gettext('Extra fields: %s', 'facebook'),
-        '/person/weight' => gettext('Data must be defined'),
-        '/person/age'    => gettext('Got value "%s" less then "%s"', 14, 18),
-    },
-    'get_errors_by_dpath'
-);
-
-#
 # has_error
 #
 
-ok($validator->has_error('contacts'),    'contracts has error');
-ok($validator->has_error(['login']),     'login has error');
-ok($validator->has_error('/person/age'), 'person.age has error');
-ok($validator->has_error(['person', 'height']), 'person.height has error');
+ok($validator->has_error('contacts'),      'contracts has error');
+ok($validator->has_error('/person/age'),   'person.age has error');
 ok($validator->has_error('/pets/1/breed'), 'pets[1].breed has error');
-ok($validator->has_error(['pets', '1', 'breed']), 'pets[1].breed has error (dpath as array)');
 
-ok(!$validator->has_error('password'),   'password has not error');
-ok(!$validator->has_error(['password']), 'password has not error (dpath as array)');
-ok(!$validator->has_error(['person', 'first-name']), 'person.first_name has not error');
+ok(!$validator->has_error('password'),           'password has not error');
 ok(!$validator->has_error('/person/first_name'), 'person.first_name has not error');
 
 #
@@ -218,16 +195,5 @@ ok(!$validator->has_error('/person/first_name'), 'person.first_name has not erro
 #
 
 is($validator->get_error('contacts'), gettext('Extra fields: %s', 'facebook'), 'Message for contacts');
-is(
-    $validator->get_error(['login']),
-    gettext('Login can contain any letters a to z and any numbers from 0 through 9'),
-    'Message for login'
-  );
 is($validator->get_error('/person/age'), gettext('Got value "%s" less then "%s"', 14, 18), 'Message for person.age');
-is($validator->get_error(['person', 'height']), gettext('Enter your height'), 'Message for person.height');
 is($validator->get_error('/pets/1/breed'), gettext('Length "%s" less then "%s"', 'no', 3), 'Message for pets[1].breed');
-is(
-    $validator->get_error(['pets', '1', 'breed']),
-    gettext('Length "%s" less then "%s"', 'no', 3),
-    'Message for pets[1].breed'
-  );

@@ -79,20 +79,20 @@ sub all {
     );
 
     return sub {
-        my %errors = ();
+        my $errors = [];
 
         my $num = 0;
         $path_manager->set_dynamic_part(\$num);
         foreach (@{$_[1]}) {
             unless ($validator->_validate($_)) {
-                $errors{$num} = $validator->get_errors;
+                $errors->[$num] = $validator->get_errors;
             }
 
             $num++;
         }
         $path_manager->reset_dynamic_part();
 
-        throw FF \%errors if %errors;
+        throw FF $errors if @$errors;
 
         return TRUE;
     };
@@ -127,17 +127,17 @@ sub contents {
         throw FF gettext('Data size "%s" no equal "%s"', scalar(@{$_[1]}), scalar(@validators))
           unless @{$_[1]} == @validators;
 
-        my %errors = ();
+        my $errors = [];
         my $num    = 0;
         foreach (@{$_[1]}) {
             unless ($validators[$num]->_validate($_)) {
-                $errors{$num} = $validators[$num]->get_errors;
+                $errors->[$num] = $validators[$num]->get_errors;
             }
 
             $num++;
         }
 
-        throw FF \%errors if %errors;
+        throw FF $errors if @$errors;
 
         return TRUE;
     };

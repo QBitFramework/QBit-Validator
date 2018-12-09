@@ -4,8 +4,6 @@ use qbit;
 
 use base qw(QBit::Validator::Type);
 
-#use Data::DPath qw(dpath);
-
 use QBit::Validator;
 
 use Exception::Validator;
